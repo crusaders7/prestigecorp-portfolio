@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrestigeCorp - Professional Programming & Freelance Services</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0B1120; /* Even darker blue */
+            color: #E5E7EB;
+        }
+        .glass-nav {
+            background: rgba(11, 17, 32, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .btn-primary {
+            @apply bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-500 transition-all duration-300 ease-in-out transform hover:scale-105 shadow-lg shadow-indigo-600/30;
+        }
+        .btn-secondary {
+            @apply bg-gray-700/50 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600/70 border border-gray-600 transition-all duration-300 ease-in-out;
+        }
+        .section-title {
+            @apply text-4xl font-bold text-center mb-2 text-white;
+        }
+        .section-subtitle {
+            @apply text-lg text-center text-indigo-400 mb-12;
+        }
+        .card {
+            @apply bg-gray-800/50 border border-gray-700 rounded-xl p-6 transition duration-300 ease-in-out hover:-translate-y-2 hover:border-indigo-500;
+        }
+        .tag {
+            @apply inline-block bg-indigo-500/20 text-indigo-300 text-xs font-medium px-3 py-1 rounded-full;
+        }
+        /* For scroll animations */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="antialiased" x-data>
+
+    <!-- Header -->
+    <header class="fixed w-full z-20 glass-nav">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="#" class="text-2xl font-bold text-white tracking-wider">Prestige<span class="text-indigo-400">Corp</span></a>
+            <nav class="hidden md:flex space-x-8 items-center">
+                <a href="#about" class="hover:text-indigo-400 transition duration-300">About</a>
+                <a href="#projects" class="hover:text-indigo-400 transition duration-300">Projects</a>
+                <a href="#skills" class="hover:text-indigo-400 transition duration-300">Skills</a>
+                <a href="#contact" class="btn-primary text-sm py-2 px-4">Contact Me</a>
+            </nav>
+            <button class="md:hidden text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <main class="pt-24">
+        <section id="hero" class="container mx-auto px-6 py-28 text-center">
+            <h1 class="text-5xl md:text-6xl font-extrabold leading-tight text-white mb-4">
+                I Build <span class="text-indigo-400" id="typing-effect"></span>
+            </h1>
+            <p class="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto mb-8">
+                Python programmer and freelancer specializing in web scraping, automation, and bespoke software solutions. Transforming complex problems into elegant, efficient code.
+            </p>
+            <div class="flex justify-center gap-4">
+                <a href="#projects" class="btn-primary">Explore My Work</a>
+                <a href="https://github.com/captncasper" target="_blank" rel="noopener noreferrer" class="btn-secondary">View GitHub</a>
+            </div>
+        </section>
+
+        <!-- About Me & GitHub Links -->
+        <section id="about" class="py-20 bg-gray-900/50">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-16 fade-in">
+                    <h2 class="section-title">About Me</h2>
+                    <p class="section-subtitle">Developer. Problem-Solver. Freelancer.</p>
+                    <div class="max-w-3xl mx-auto text-gray-300 text-lg space-y-4">
+                        <p>
+                            I'm the programmer behind PrestigeCorp, driven by a passion for creating software that is both powerful and practical. My expertise lies in Python, where I craft solutions for web automation, data extraction, and backend development.
+                        </p>
+                        <p>
+                            I approach every project as a unique challenge, applying meticulous attention to detail and a commitment to quality. I thrive on turning innovative ideas into reality.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- GitHub Profiles -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto fade-in">
+                    <a href="https://github.com/captncasper" target="_blank" rel="noopener noreferrer" class="group block p-8 bg-gray-800/50 border border-gray-700 rounded-xl hover:bg-gray-800 hover:border-indigo-500 transition-all duration-300">
+                        <div class="flex items-center gap-4">
+                            <svg class="w-12 h-12 text-gray-400 group-hover:text-white transition-colors" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.168 6.839 9.49.5.092.682-.217.682-.482 0-.237-.009-.868-.014-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.031-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.378.203 2.398.1 2.65.64.7 1.028 1.595 1.028 2.688 0 3.848-2.338 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.001 10.001 0 0022 12c0-5.523-4.477-10-10-10z" clip-rule="evenodd" /></svg>
+                            <div>
+                                <h3 class="text-xl font-bold text-white">captncasper</h3>
+                                <p class="text-gray-400 group-hover:text-indigo-300 transition-colors">View my primary projects & contributions</p>
+                            </div>
+                        </div>
+                    </a>
+                    <a href="https://github.com/crusaders7" target="_blank" rel="noopener noreferrer" class="group block p-8 bg-gray-800/50 border border-gray-700 rounded-xl hover:bg-gray-800 hover:border-indigo-500 transition-all duration-300">
+                        <div class="flex items-center gap-4">
+                            <svg class="w-12 h-12 text-gray-400 group-hover:text-white transition-colors" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.168 6.839 9.49.5.092.682-.217.682-.482 0-.237-.009-.868-.014-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.031-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.378.203 2.398.1 2.65.64.7 1.028 1.595 1.028 2.688 0 3.848-2.338 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.001 10.001 0 0022 12c0-5.523-4.477-10-10-10z" clip-rule="evenodd" /></svg>
+                            <div>
+                                <h3 class="text-xl font-bold text-white">crusaders7</h3>
+                                <p class="text-gray-400 group-hover:text-indigo-300 transition-colors">Explore my other work and experiments</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Projects Section -->
+        <section id="projects" class="py-20">
+            <div class="container mx-auto px-6">
+                <div class="text-center fade-in">
+                    <h2 class="section-title">Featured Projects</h2>
+                    <p class="section-subtitle">A selection of my proudest work</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Project 1: merc_scraper -->
+                    <div class="card flex flex-col fade-in" style="transition-delay: 100ms;">
+                        <div class="flex-grow">
+                            <h3 class="text-2xl font-bold mb-3 text-white">merc_scraper</h3>
+                            <div class="space-x-2 mb-4">
+                                <span class="tag">Python</span><span class="tag">Selenium</span><span class="tag">Web Scraping</span>
+                            </div>
+                            <p class="text-gray-400 mb-4">A powerful web scraper for Mercari, engineered to handle dynamic content and anti-scraping measures. A showcase of automation and data parsing expertise.</p>
+                        </div>
+                        <div class="mt-6">
+                            <a href="https://github.com/captncasper/merc_scraper" target="_blank" rel="noopener noreferrer" class="w-full text-center block bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 transition-all duration-300">
+                                View on GitHub
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Project 2: Herbarium AI System -->
+                    <div class="card flex flex-col fade-in" style="transition-delay: 200ms;">
+                        <div class="flex-grow">
+                            <h3 class="text-2xl font-bold mb-3 text-white">🌿 Herbarium AI System</h3>
+                            <div class="space-x-2 mb-4">
+                                <span class="tag">Vision Transformers</span><span class="tag">PyTorch</span><span class="tag">AI/ML</span>
+                            </div>
+                            <p class="text-gray-400 mb-4">A research-grade AI identifying 916+ eucalyptus species from 7,600+ real herbarium specimens using state-of-the-art models like ViT, Swin, and ConvNeXT.</p>
+                        </div>
+                        <div class="mt-6">
+                            <a href="#" class="w-full text-center block bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 transition-all duration-300">
+                                Details (Private Repo)
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Project 3: Placeholder -->
+                    <div class="card flex flex-col fade-in" style="transition-delay: 300ms;">
+                         <div class="flex-grow">
+                            <h3 class="text-2xl font-bold mb-3 text-white">Your Next Great Project</h3>
+                            <div class="space-x-2 mb-4">
+                                <span class="tag">Tech</span><span class="tag">Stack</span><span class="tag">Here</span>
+                            </div>
+                            <p class="text-gray-400 mb-4">Describe your project here. What problem does it solve? What technologies did you use? Make it compelling.</p>
+                        </div>
+                         <div class="mt-6">
+                            <a href="#" class="w-full text-center block bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 transition-all duration-300">
+                                View on GitHub
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Skills Section -->
+        <section id="skills" class="py-20 bg-gray-900/50">
+            <div class="container mx-auto px-6">
+                <div class="text-center fade-in">
+                    <h2 class="section-title">Core Technologies</h2>
+                    <p class="section-subtitle">My trusted toolkit for building solutions</p>
+                </div>
+                <div class="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
+                    <div class="fade-in" style="transition-delay: 100ms;"><div class="flex flex-col items-center p-4 card h-full"><img src="https://www.vectorlogo.zone/logos/python/python-icon.svg" alt="Python" class="h-16 w-16 mb-2 flex-grow"><span class="font-medium mt-2">Python</span></div></div>
+                    <div class="fade-in" style="transition-delay: 150ms;"><div class="flex flex-col items-center p-4 card h-full"><img src="https://www.vectorlogo.zone/logos/djangoproject/djangoproject-icon.svg" alt="Django" class="h-16 w-16 mb-2 flex-grow"><span class="font-medium mt-2">Django</span></div></div>
+                    <div class="fade-in" style="transition-delay: 200ms;"><div class="flex flex-col items-center p-4 card h-full"><img src="https://www.vectorlogo.zone/logos/pocoo_flask/pocoo_flask-icon.svg" alt="Flask" class="h-16 w-16 mb-2 flex-grow"><span class="font-medium mt-2">Flask</span></div></div>
+                    <div class="fade-in" style="transition-delay: 250ms;"><div class="flex flex-col items-center p-4 card h-full"><img src="https://www.vectorlogo.zone/logos/selenium/selenium-icon.svg" alt="Selenium" class="h-16 w-16 mb-2 flex-grow"><span class="font-medium mt-2">Selenium</span></div></div>
+                    <div class="fade-in" style="transition-delay: 300ms;"><div class="flex flex-col items-center p-4 card h-full"><img src="https://www.vectorlogo.zone/logos/w3_html5/w3_html5-icon.svg" alt="HTML5" class="h-16 w-16 mb-2 flex-grow"><span class="font-medium mt-2">HTML5</span></div></div>
+                    <div class="fade-in" style="transition-delay: 350ms;"><div class="flex flex-col items-center p-4 card h-full"><img src="https://www.vectorlogo.zone/logos/w3_css/w3_css-icon.svg" alt="CSS3" class="h-16 w-16 mb-2 flex-grow"><span class="font-medium mt-2">CSS3</span></div></div>
+                    <div class="fade-in" style="transition-delay: 400ms;"><div class="flex flex-col items-center p-4 card h-full"><img src="https://www.vectorlogo.zone/logos/javascript/javascript-icon.svg" alt="JavaScript" class="h-16 w-16 mb-2 flex-grow"><span class="font-medium mt-2">JavaScript</span></div></div>
+                    <div class="fade-in" style="transition-delay: 450ms;"><div class="flex flex-col items-center p-4 card h-full"><img src="https://www.vectorlogo.zone/logos/git-scm/git-scm-icon.svg" alt="Git" class="h-16 w-16 mb-2 flex-grow"><span class="font-medium mt-2">Git & GitHub</span></div></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="py-24">
+            <div class="container mx-auto px-6 text-center fade-in">
+                <h2 class="text-4xl font-extrabold text-white">Have a project in mind?</h2>
+                <p class="text-indigo-400 text-2xl font-bold mt-2 mb-6">Let's build something great together.</p>
+                <p class="text-lg text-gray-300 max-w-2xl mx-auto mb-10">
+                    I'm currently available for freelance opportunities. If you're looking for a dedicated programmer to bring your vision to life, I'd love to hear from you.
+                </p>
+                <a href="mailto:prestigecorp4@gmail.com" class="btn-primary text-xl">
+                    Get In Touch
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900/50 border-t border-gray-800">
+        <div class="container mx-auto px-6 py-6 text-center text-gray-400">
+            <p>&copy; 2024 PrestigeCorp. Designed & Built with passion.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript for animations -->
+    <script>
+        // Typing Effect
+        document.addEventListener('DOMContentLoaded', function() {
+            const words = ["Web Scrapers.", "Automation Scripts.", "AI Systems.", "Efficient Software."];
+            let i = 0;
+            let j = 0;
+            let currentWord = "";
+            let isDeleting = false;
+            const typingEffectElement = document.getElementById('typing-effect');
+
+            function type() {
+                currentWord = words[i];
+                if (isDeleting) {
+                    j--;
+                    typingEffectElement.innerHTML = currentWord.substring(0, j);
+                } else {
+                    j++;
+                    typingEffectElement.innerHTML = currentWord.substring(0, j);
+                }
+
+                if (!isDeleting && j === currentWord.length) {
+                    isDeleting = true;
+                    setTimeout(type, 2000);
+                } else if (isDeleting && j === 0) {
+                    isDeleting = false;
+                    i = (i + 1) % words.length;
+                    setTimeout(type, 500);
+                } else {
+                    let typeSpeed = isDeleting ? 50 : 120;
+                    setTimeout(type, typeSpeed);
+                }
+            }
+            type();
+
+            // Scroll Animations
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, {
+                threshold: 0.1
+            });
+
+            const fadeElements = document.querySelectorAll('.fade-in');
+            fadeElements.forEach(el => observer.observe(el));
+        });
+    </script>
+</body>
+</html>
+
