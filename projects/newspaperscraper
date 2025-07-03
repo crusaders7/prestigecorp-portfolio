@@ -276,11 +276,14 @@
 
     <!-- JavaScript for Demo -->
     <script>
-        // Demo API endpoint (replace with your actual Vercel deployment URL)
-        const API_URL = 'https://newspaper-scraper.vercel.app';
+        // API endpoints - will use relative URLs when deployed
+        const API_BASE = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000/api' 
+            : '/api';
         
         let searchResults = [];
         let scrapedArticles = [];
+        let currentQuery = '';
 
         function showStatus(message, type = 'info') {
             const statusDiv = document.getElementById('statusMessage');
@@ -298,6 +301,10 @@
             statusDiv.classList.remove('hidden');
         }
 
+        function hideStatus() {
+            document.getElementById('statusMessage').classList.add('hidden');
+        }
+
         async function searchArticles() {
             const query = document.getElementById('searchQuery').value.trim();
             const maxResults = parseInt(document.getElementById('maxResults').value) || 10;
@@ -307,79 +314,192 @@
                 return;
             }
             
+            currentQuery = query;
             const searchBtn = document.getElementById('searchBtn');
             searchBtn.disabled = true;
             searchBtn.innerHTML = 'Searching... <span class="loading ml-2"></span>';
             
             showStatus('Searching for articles...', 'info');
             
-            // For demo purposes - simulate search
-            setTimeout(() => {
-                searchResults = [
-                    { title: 'Example Article 1', url: '#', preview: 'This is a preview of the article content...' },
-                    { title: 'Example Article 2', url: '#', preview: 'Another article preview here...' },
-                    { title: 'Example Article 3', url: '#', preview: 'More article content preview...' }
-                ];
+            try {
+                const response = await fetch(`${API_BASE}/search`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query, max_results: maxResults }),
+                });
                 
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Search failed');
+                }
+                
+                searchResults = data.urls;
                 displaySearchResults();
-                showStatus(`Found ${searchResults.length} articles for "${query}"`, 'success');
+                showStatus(`Found ${data.found} articles for "${query}"`, 'success');
+                
+            } catch (error) {
+                showStatus(error.message || 'Search failed. Please try again.', 'error');
+                document.getElementById('resultsSection').classList.add('hidden');
+            } finally {
                 searchBtn.disabled = false;
                 searchBtn.innerHTML = 'Search Articles';
-            }, 2000);
+            }
         }
 
         function displaySearchResults() {
             const resultsSection = document.getElementById('resultsSection');
             const articlesList = document.getElementById('articlesList');
             
-            articlesList.innerHTML = searchResults.map((article, index) => `
-                <div class="article-card">
-                    <h4 class="font-semibold text-white mb-2">${article.title}</h4>
-                    <p class="text-gray-400 text-sm">${article.preview}</p>
-                </div>
-            `).join('');
+            articlesList.innerHTML = searchResults.map((url, index) => {
+                // Extract a preview from the URL
+                const urlParts = url.split('/');
+                const storyPart = urlParts[urlParts.length - 2] || '';
+                const preview = storyPart.replace(/-/g, ' ').substring(0, 100) + '...';
+                
+                return `
+                    <div class="article-card">
+                        <h4 class="font-semibold text-white mb-2">Article ${index + 1}</h4>
+                        <p class="text-gray-400 text-sm mb-2">${preview}</p>
+                        <a href="${url}" target="_blank" class="text-indigo-400 text-sm hover:underline">View original →</a>
+                    </div>
+                `;
+            }).join('');
             
             resultsSection.classList.remove('hidden');
             document.getElementById('downloadSection').classList.add('hidden');
+            scrapedArticles = []; // Reset scraped articles
         }
 
-        function scrapeArticles() {
+        async function scrapeArticles() {
+            if (searchResults.length === 0) {
+                showStatus('No articles to scrape', 'error');
+                return;
+            }
+            
             const scrapeBtn = document.getElementById('scrapeBtn');
             scrapeBtn.disabled = true;
             scrapeBtn.innerHTML = 'Scraping... <span class="loading ml-2"></span>';
             
+            showStatus(`Scraping ${searchResults.length} articles... This may take a moment.`, 'info');
+            
             const progressContainer = document.getElementById('progressContainer');
             const progressFill = document.getElementById('progressFill');
             progressContainer.classList.remove('hidden');
+            progressFill.style.width = '0%';
             
-            let progress = 0;
-            const interval = setInterval(() => {
-                progress += 10;
-                progressFill.style.width = progress + '%';
+            try {
+                const response = await fetch(`${API_BASE}/scrape`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        urls: searchResults,
+                        query: currentQuery 
+                    }),
+                });
                 
-                if (progress >= 100) {
-                    clearInterval(interval);
-                    scrapeBtn.disabled = false;
-                    scrapeBtn.innerHTML = 'Scrape All Articles';
-                    document.getElementById('downloadSection').classList.remove('hidden');
-                    showStatus('Successfully scraped all articles!', 'success');
-                    
-                    setTimeout(() => {
-                        progressContainer.classList.add('hidden');
-                        progressFill.style.width = '0%';
-                    }, 1000);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Scraping failed');
                 }
-            }, 200);
+                
+                scrapedArticles = data.articles;
+                progressFill.style.width = '100%';
+                
+                displayScrapedArticles();
+                showStatus(`Successfully scraped ${data.scraped} articles`, 'success');
+                
+            } catch (error) {
+                showStatus(error.message || 'Scraping failed. Please try again.', 'error');
+            } finally {
+                scrapeBtn.disabled = false;
+                scrapeBtn.innerHTML = 'Scrape All Articles';
+                setTimeout(() => {
+                    progressContainer.classList.add('hidden');
+                    progressFill.style.width = '0%';
+                }, 1000);
+            }
         }
 
-        function downloadArticles(format) {
-            showStatus(`Downloading articles as ${format.toUpperCase()}...`, 'info');
+        function displayScrapedArticles() {
+            const articlesList = document.getElementById('articlesList');
             
-            // For demo - show success after delay
-            setTimeout(() => {
-                showStatus(`Downloaded articles as ${format.toUpperCase()}!`, 'success');
-            }, 1000);
+            articlesList.innerHTML = scrapedArticles.map((article, index) => `
+                <div class="article-card" onclick="toggleArticle(${index})">
+                    <h4 class="font-semibold text-white mb-2">${article.title}</h4>
+                    <p class="text-gray-400 text-sm mb-2">
+                        ${article.date ? `Date: ${article.date} | ` : ''}
+                        Click to read full article
+                    </p>
+                    <div id="article-content-${index}" class="hidden mt-4 text-gray-300 text-sm">
+                        ${article.content.substring(0, 500)}...
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('downloadSection').classList.remove('hidden');
         }
+
+        function toggleArticle(index) {
+            const contentDiv = document.getElementById(`article-content-${index}`);
+            contentDiv.classList.toggle('hidden');
+        }
+
+        async function downloadArticles(format) {
+            if (scrapedArticles.length === 0) {
+                showStatus('No articles to download', 'error');
+                return;
+            }
+            
+            showStatus(`Preparing ${format.toUpperCase()} download...`, 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/download`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        articles: scrapedArticles,
+                        format: format 
+                    }),
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Download failed');
+                }
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = format === 'json' 
+                    ? `newspaper_articles_${currentQuery.replace(/\s+/g, '_')}.json`
+                    : `newspaper_articles_${currentQuery.replace(/\s+/g, '_')}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showStatus(`Downloaded ${scrapedArticles.length} articles as ${format.toUpperCase()}`, 'success');
+                
+            } catch (error) {
+                showStatus(error.message || 'Download failed', 'error');
+            }
+        }
+
+        // Allow Enter key to submit search
+        document.getElementById('searchQuery').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchArticles();
+            }
+        });
     </script>
 </body>
 </html>
