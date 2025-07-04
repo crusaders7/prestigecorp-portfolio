@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PrestigeCorp - Professional Programming & Freelance Services</title>
+    <title>Newspaper Scraper - PrestigeCorp Project</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0B1120; /* Even darker blue */
+            background-color: #0B1120;
             color: #E5E7EB;
         }
         .glass-nav {
@@ -25,193 +24,288 @@
         .btn-secondary {
             @apply bg-gray-700/50 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-600/70 border border-gray-600 transition-all duration-300 ease-in-out;
         }
-        .section-title {
-            @apply text-4xl font-bold text-center mb-2 text-white;
-        }
-        .section-subtitle {
-            @apply text-lg text-center text-indigo-400 mb-12;
-        }
         .card {
-            @apply bg-gray-800/50 border border-gray-700 rounded-xl p-6 transition duration-300 ease-in-out hover:-translate-y-2 hover:border-indigo-500;
+            @apply bg-gray-800/50 border border-gray-700 rounded-xl p-6;
         }
         .tag {
             @apply inline-block bg-indigo-500/20 text-indigo-300 text-xs font-medium px-3 py-1 rounded-full;
         }
-        /* For scroll animations */
-        .fade-in {
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        .search-input {
+            @apply w-full px-4 py-3 bg-gray-800/50 border border-gray-600 rounded-lg focus:outline-none focus:border-indigo-500 text-white placeholder-gray-400;
         }
-        .fade-in.visible {
-            opacity: 1;
-            transform: translateY(0);
+        .article-card {
+            @apply bg-gray-800/30 border border-gray-700 rounded-lg p-6 hover:bg-gray-800/50 transition-all cursor-pointer;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #374151;
+            border-top: 3px solid #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .progress-bar {
+            @apply w-full h-2 bg-gray-700 rounded-full overflow-hidden;
+        }
+        .progress-fill {
+            @apply h-full bg-indigo-600 transition-all duration-300;
+        }
+        .checkbox-container {
+            @apply flex items-center space-x-3 p-3 bg-gray-800/30 rounded-lg border border-gray-600 hover:bg-gray-800/50 transition-all;
+        }
+        .checkbox {
+            @apply w-5 h-5 text-indigo-600 bg-gray-700 border-gray-600 rounded focus:ring-indigo-500 focus:ring-2;
+        }
+        .source-logo {
+            @apply w-6 h-6 rounded;
         }
     </style>
 </head>
-<body class="antialiased" x-data>
+<body class="antialiased">
 
     <!-- Header -->
     <header class="fixed w-full z-20 glass-nav">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <a href="#" class="text-2xl font-bold text-white tracking-wider">Prestige<span class="text-indigo-400">Corp</span></a>
+            <a href="/" class="text-2xl font-bold text-white tracking-wider">Prestige<span class="text-indigo-400">Corp</span></a>
             <nav class="hidden md:flex space-x-8 items-center">
-                <a href="#about" class="hover:text-indigo-400 transition duration-300">About</a>
-                <a href="#projects" class="hover:text-indigo-400 transition duration-300">Projects</a>
-                <a href="#skills" class="hover:text-indigo-400 transition duration-300">Skills</a>
-                <a href="#contact" class="btn-primary text-sm py-2 px-4">Contact Me</a>
+                <a href="/" class="hover:text-indigo-400 transition duration-300">Home</a>
+                <a href="/#projects" class="hover:text-indigo-400 transition duration-300">Projects</a>
+                <a href="https://github.com/captncasper" target="_blank" class="hover:text-indigo-400 transition duration-300">GitHub</a>
+                <a href="/#contact" class="btn-primary text-sm py-2 px-4">Contact</a>
             </nav>
-            <button class="md:hidden text-white">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
-            </button>
         </div>
     </header>
 
-    <!-- Hero Section -->
-    <main class="pt-24">
-        <section id="hero" class="container mx-auto px-6 py-28 text-center">
-            <h1 class="text-5xl md:text-6xl font-extrabold leading-tight text-white mb-4">
-                I Build <span class="text-indigo-400" id="typing-effect"></span>
-            </h1>
-            <p class="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto mb-8">
-                Python programmer and freelancer specializing in web scraping, automation, and bespoke software solutions. Transforming complex problems into elegant, efficient code.
-            </p>
-            <div class="flex justify-center gap-4">
-                <a href="#projects" class="btn-primary">Explore My Work</a>
-                <a href="https://github.com/captncasper" target="_blank" rel="noopener noreferrer" class="btn-secondary">View GitHub</a>
-            </div>
-        </section>
-
-        <!-- About Me & GitHub Links -->
-        <section id="about" class="py-20 bg-gray-900/50">
-            <div class="container mx-auto px-6">
-                <div class="text-center mb-16 fade-in">
-                    <h2 class="section-title">About Me</h2>
-                    <p class="section-subtitle">Developer. Problem-Solver. Freelancer.</p>
-                    <div class="max-w-3xl mx-auto text-gray-300 text-lg space-y-4">
-                        <p>
-                            I'm the programmer behind PrestigeCorp, driven by a passion for creating software that is both powerful and practical. My expertise lies in Python, where I craft solutions for web automation, data extraction, and backend development.
-                        </p>
-                        <p>
-                            I approach every project as a unique challenge, applying meticulous attention to detail and a commitment to quality. I thrive on turning innovative ideas into reality.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- GitHub Profiles -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto fade-in">
-                    <a href="https://github.com/captncasper" target="_blank" rel="noopener noreferrer" class="group block p-8 bg-gray-800/50 border border-gray-700 rounded-xl hover:bg-gray-800 hover:border-indigo-500 transition-all duration-300">
-                        <div class="flex items-center gap-4">
-                            <svg class="w-12 h-12 text-gray-400 group-hover:text-white transition-colors" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.168 6.839 9.49.5.092.682-.217.682-.482 0-.237-.009-.868-.014-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.031-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.378.203 2.398.1 2.65.64.7 1.028 1.595 1.028 2.688 0 3.848-2.338 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.001 10.001 0 0022 12c0-5.523-4.477-10-10-10z" clip-rule="evenodd" /></svg>
-                            <div>
-                                <h3 class="text-xl font-bold text-white">captncasper</h3>
-                                <p class="text-gray-400 group-hover:text-indigo-300 transition-colors">View my primary projects & contributions</p>
-                            </div>
-                        </div>
-                    </a>
-                    <a href="https://github.com/crusaders7" target="_blank" rel="noopener noreferrer" class="group block p-8 bg-gray-800/50 border border-gray-700 rounded-xl hover:bg-gray-800 hover:border-indigo-500 transition-all duration-300">
-                        <div class="flex items-center gap-4">
-                            <svg class="w-12 h-12 text-gray-400 group-hover:text-white transition-colors" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.168 6.839 9.49.5.092.682-.217.682-.482 0-.237-.009-.868-.014-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.031-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.378.203 2.398.1 2.65.64.7 1.028 1.595 1.028 2.688 0 3.848-2.338 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.001 10.001 0 0022 12c0-5.523-4.477-10-10-10z" clip-rule="evenodd" /></svg>
-                            <div>
-                                <h3 class="text-xl font-bold text-white">crusaders7</h3>
-                                <p class="text-gray-400 group-hover:text-indigo-300 transition-colors">Explore my other work and experiments</p>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            </div>
-        </section>
-
-        <!-- Projects Section -->
-        <section id="projects" class="py-20">
-            <div class="container mx-auto px-6">
-                <div class="text-center fade-in">
-                    <h2 class="section-title">Featured Projects</h2>
-                    <p class="section-subtitle">A selection of my proudest work</p>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <!-- Project 1: Newspaper Scraper -->
-                    <div class="card flex flex-col fade-in" style="transition-delay: 100ms;">
-                        <div class="flex-grow">
-                            <h3 class="text-2xl font-bold mb-3 text-white">Newspaper Scraper</h3>
-                            <div class="space-x-2 mb-4">
-                                <span class="tag">Python</span><span class="tag">Selenium</span><span class="tag">Web Scraping</span>
-                            </div>
-                            <p class="text-gray-400 mb-4">A powerful web scraper for Newspapers, engineered to handle dynamic content and anti-scraping measures. A showcase of automation and data parsing expertise.</p>
-                        </div>
-                        <div class="mt-6">
-                            <a href="https://github.com/captncasper/merc_scraper" target="_blank" rel="noopener noreferrer" class="w-full text-center block bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 transition-all duration-300">
-                                View on GitHub
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Project 2: Herbarium AI System -->
-                    <div class="card flex flex-col fade-in" style="transition-delay: 200ms;">
-                        <div class="flex-grow">
-                            <h3 class="text-2xl font-bold mb-3 text-white">🌿 Herbarium AI System</h3>
-                            <div class="space-x-2 mb-4">
-                                <span class="tag">Vision Transformers</span><span class="tag">PyTorch</span><span class="tag">AI/ML</span>
-                            </div>
-                            <p class="text-gray-400 mb-4">A research-grade AI identifying 916+ eucalyptus species from 7,600+ real herbarium specimens using state-of-the-art models like ViT, Swin, and ConvNeXT.</p>
-                        </div>
-                        <div class="mt-6">
-                            <a href="#" class="w-full text-center block bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 transition-all duration-300">
-                                Details (Private Repo)
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Project 3: Placeholder -->
-                    <div class="card flex flex-col fade-in" style="transition-delay: 300ms;">
-                         <div class="flex-grow">
-                            <h3 class="text-2xl font-bold mb-3 text-white">Your Next Great Project</h3>
-                            <div class="space-x-2 mb-4">
-                                <span class="tag">Tech</span><span class="tag">Stack</span><span class="tag">Here</span>
-                            </div>
-                            <p class="text-gray-400 mb-4">Describe your project here. What problem does it solve? What technologies did you use? Make it compelling.</p>
-                        </div>
-                         <div class="mt-6">
-                            <a href="#" class="w-full text-center block bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg hover:bg-gray-600 transition-all duration-300">
-                                View on GitHub
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Skills Section -->
-        <section id="skills" class="py-20 bg-gray-900/50">
-            <div class="container mx-auto px-6">
-                <div class="text-center fade-in">
-                    <h2 class="section-title">Core Technologies</h2>
-                    <p class="section-subtitle">My trusted toolkit for building solutions</p>
-                </div>
-                <div class="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
-                    <div class="fade-in" style="transition-delay: 100ms;"><div class="flex flex-col items-center p-4 card h-full"><img src="https://www.vectorlogo.zone/logos/python/python-icon.svg" alt="Python" class="h-16 w-16 mb-2 flex-grow"><span class="font-medium mt-2">Python</span></div></div>
-                    <div class="fade-in" style="transition-delay: 150ms;"><div class="flex flex-col items-center p-4 card h-full"><img src="https://www.vectorlogo.zone/logos/djangoproject/djangoproject-icon.svg" alt="Django" class="h-16 w-16 mb-2 flex-grow"><span class="font-medium mt-2">Django</span></div></div>
-                    <div class="fade-in" style="transition-delay: 200ms;"><div class="flex flex-col items-center p-4 card h-full"><img src="https://www.vectorlogo.zone/logos/pocoo_flask/pocoo_flask-icon.svg" alt="Flask" class="h-16 w-16 mb-2 flex-grow"><span class="font-medium mt-2">Flask</span></div></div>
-                    <div class="fade-in" style="transition-delay: 250ms;"><div class="flex flex-col items-center p-4 card h-full"><img src="https://www.vectorlogo.zone/logos/selenium/selenium-icon.svg" alt="Selenium" class="h-16 w-16 mb-2 flex-grow"><span class="font-medium mt-2">Selenium</span></div></div>
-                    <div class="fade-in" style="transition-delay: 300ms;"><div class="flex flex-col items-center p-4 card h-full"><img src="https://www.vectorlogo.zone/logos/w3_html5/w3_html5-icon.svg" alt="HTML5" class="h-16 w-16 mb-2 flex-grow"><span class="font-medium mt-2">HTML5</span></div></div>
-                    <div class="fade-in" style="transition-delay: 350ms;"><div class="flex flex-col items-center p-4 card h-full"><img src="https://www.vectorlogo.zone/logos/w3_css/w3_css-icon.svg" alt="CSS3" class="h-16 w-16 mb-2 flex-grow"><span class="font-medium mt-2">CSS3</span></div></div>
-                    <div class="fade-in" style="transition-delay: 400ms;"><div class="flex flex-col items-center p-4 card h-full"><img src="https://www.vectorlogo.zone/logos/javascript/javascript-icon.svg" alt="JavaScript" class="h-16 w-16 mb-2 flex-grow"><span class="font-medium mt-2">JavaScript</span></div></div>
-                    <div class="fade-in" style="transition-delay: 450ms;"><div class="flex flex-col items-center p-4 card h-full"><img src="https://www.vectorlogo.zone/logos/git-scm/git-scm-icon.svg" alt="Git" class="h-16 w-16 mb-2 flex-grow"><span class="font-medium mt-2">Git & GitHub</span></div></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Contact Section -->
-        <section id="contact" class="py-24">
-            <div class="container mx-auto px-6 text-center fade-in">
-                <h2 class="text-4xl font-extrabold text-white">Have a project in mind?</h2>
-                <p class="text-indigo-400 text-2xl font-bold mt-2 mb-6">Let's build something great together.</p>
-                <p class="text-lg text-gray-300 max-w-2xl mx-auto mb-10">
-                    I'm currently available for freelance opportunities. If you're looking for a dedicated programmer to bring your vision to life, I'd love to hear from you.
+    <!-- Main Content -->
+    <main class="pt-24 pb-20">
+        <!-- Project Header -->
+        <section class="container mx-auto px-6 py-12">
+            <div class="max-w-4xl mx-auto text-center">
+                <h1 class="text-5xl font-bold text-white mb-4">Newspaper Scraper</h1>
+                <p class="text-xl text-gray-300 mb-8">
+                    A powerful web application for searching, scraping, and downloading clean articles from multiple news sources.
                 </p>
-                <a href="mailto:prestigecorp4@gmail.com" class="btn-primary text-xl">
-                    Get In Touch
-                </a>
+                <div class="flex flex-wrap justify-center gap-3 mb-8">
+                    <span class="tag">Python</span>
+                    <span class="tag">Flask</span>
+                    <span class="tag">BeautifulSoup</span>
+                    <span class="tag">Multi-Source</span>
+                    <span class="tag">Vercel</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Live Demo Section -->
+        <section class="container mx-auto px-6 py-8">
+            <div class="max-w-6xl mx-auto">
+                <div class="card">
+                    <h2 class="text-2xl font-bold text-white mb-6">Try It Live</h2>
+                    
+                    <!-- Source Selection -->
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-white mb-4">Select News Sources</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <label class="checkbox-container cursor-pointer">
+                                <input type="checkbox" id="source-mercury" value="mercury" class="checkbox" checked>
+                                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iNCIgZmlsbD0iIzE5MzM0OSIvPgo8dGV4dCB4PSIxMiIgeT0iMTYiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI4IiBmaWxsPSIjRkZGRkZGIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5NPC90ZXh0Pgo8L3N2Zz4K" alt="Mercury" class="source-logo">
+                                <div>
+                                    <div class="text-white font-medium">Illawarra Mercury</div>
+                                    <div class="text-gray-400 text-sm">Local Australian news</div>
+                                </div>
+                            </label>
+                            
+                            <label class="checkbox-container cursor-pointer">
+                                <input type="checkbox" id="source-abc" value="abc" class="checkbox" checked>
+                                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iNCIgZmlsbD0iI0VEMTkyRCIvPgo8dGV4dCB4PSIxMiIgeT0iMTYiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI4IiBmaWxsPSIjRkZGRkZGIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5BQkM8L3RleHQ+Cjwvc3ZnPgo=" alt="ABC" class="source-logo">
+                                <div>
+                                    <div class="text-white font-medium">ABC News</div>
+                                    <div class="text-gray-400 text-sm">Australian Broadcasting</div>
+                                </div>
+                            </label>
+                            
+                            <label class="checkbox-container cursor-pointer">
+                                <input type="checkbox" id="source-guardian" value="guardian" class="checkbox" checked>
+                                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iNCIgZmlsbD0iIzA1MkY1RiIvPgo8dGV4dCB4PSIxMiIgeT0iMTYiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI4IiBmaWxsPSIjRkZGRkZGIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5HPC90ZXh0Pgo8L3N2Zz4K" alt="Guardian" class="source-logo">
+                                <div>
+                                    <div class="text-white font-medium">The Guardian</div>
+                                    <div class="text-gray-400 text-sm">International coverage</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Search Form -->
+                    <div class="space-y-4">
+                        <div class="flex flex-col md:flex-row gap-4">
+                            <input 
+                                type="text" 
+                                id="searchQuery" 
+                                placeholder="Enter search term (e.g., climate change, technology, sports)"
+                                class="search-input flex-1"
+                            >
+                            <input 
+                                type="number" 
+                                id="maxResults" 
+                                placeholder="Max articles"
+                                value="10"
+                                min="1"
+                                max="20"
+                                class="search-input w-full md:w-32"
+                            >
+                            <button 
+                                id="searchBtn" 
+                                onclick="searchArticles()"
+                                class="btn-primary whitespace-nowrap"
+                            >
+                                Search Articles
+                            </button>
+                        </div>
+                        
+                        <!-- Status Message -->
+                        <div id="statusMessage" class="hidden p-4 rounded-lg"></div>
+                        
+                        <!-- Progress Bar -->
+                        <div id="progressContainer" class="hidden">
+                            <div class="progress-bar">
+                                <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results Section -->
+                    <div id="resultsSection" class="hidden mt-8">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-semibold text-white">Search Results</h3>
+                            <button 
+                                id="scrapeBtn"
+                                onclick="scrapeArticles()"
+                                class="btn-secondary text-sm"
+                            >
+                                Scrape All Articles
+                            </button>
+                        </div>
+                        <div id="articlesList" class="space-y-4 max-h-96 overflow-y-auto"></div>
+                    </div>
+
+                    <!-- Download Section -->
+                    <div id="downloadSection" class="hidden mt-6 p-4 bg-gray-900/50 rounded-lg text-center">
+                        <p class="text-gray-300 mb-4">Download scraped articles:</p>
+                        <div class="flex justify-center gap-4">
+                            <button onclick="downloadArticles('json')" class="btn-secondary text-sm">
+                                Download JSON
+                            </button>
+                            <button onclick="downloadArticles('zip')" class="btn-secondary text-sm">
+                                Download ZIP
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="container mx-auto px-6 py-12">
+            <div class="max-w-6xl mx-auto">
+                <h2 class="text-3xl font-bold text-white mb-8 text-center">Key Features</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="card">
+                        <div class="text-indigo-400 mb-4">
+                            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-white mb-2">Multi-Source Search</h3>
+                        <p class="text-gray-400">Search across multiple news sources with customizable source selection.</p>
+                    </div>
+                    <div class="card">
+                        <div class="text-indigo-400 mb-4">
+                            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-white mb-2">Clean Extraction</h3>
+                        <p class="text-gray-400">Removes ads, popups, and formatting issues to deliver pure article content.</p>
+                    </div>
+                    <div class="card">
+                        <div class="text-indigo-400 mb-4">
+                            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-white mb-2">Export Options</h3>
+                        <p class="text-gray-400">Download articles as JSON for data analysis or ZIP with individual text files.</p>
+                    </div>
+                    <div class="card">
+                        <div class="text-indigo-400 mb-4">
+                            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-white mb-2">Rate Limited</h3>
+                        <p class="text-gray-400">Respects website resources with built-in delays between requests.</p>
+                    </div>
+                    <div class="card">
+                        <div class="text-indigo-400 mb-4">
+                            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-white mb-2">Mobile Friendly</h3>
+                        <p class="text-gray-400">Responsive design works perfectly on all devices and screen sizes.</p>
+                    </div>
+                    <div class="card">
+                        <div class="text-indigo-400 mb-4">
+                            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold text-white mb-2">Fast & Efficient</h3>
+                        <p class="text-gray-400">Optimized scraping algorithms for quick results without overwhelming servers.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Technical Details -->
+        <section class="container mx-auto px-6 py-12">
+            <div class="max-w-4xl mx-auto">
+                <div class="card">
+                    <h2 class="text-2xl font-bold text-white mb-6">Technical Implementation</h2>
+                    <div class="space-y-4 text-gray-300">
+                        <p>
+                            Built with Flask and BeautifulSoup, this scraper demonstrates advanced web scraping techniques
+                            including dynamic content handling, rate limiting, and intelligent content extraction across multiple sources.
+                        </p>
+                        <p>
+                            The application features a clean API design with separate endpoints for searching, scraping,
+                            and downloading content. It implements robust error handling and respects website resources
+                            through configurable delays.
+                        </p>
+                        <div class="mt-6">
+                            <h3 class="text-lg font-semibold text-white mb-3">Tech Stack:</h3>
+                            <ul class="list-disc list-inside space-y-2 text-gray-400">
+                                <li>Backend: Python, Flask, BeautifulSoup4, Requests</li>
+                                <li>Frontend: Vanilla JavaScript, Tailwind CSS</li>
+                                <li>Deployment: Vercel with serverless functions</li>
+                                <li>Sources: Illawarra Mercury, ABC News, The Guardian</li>
+                                <li>Features: Multi-source selection, rate limiting, content cleaning</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="mt-8 flex gap-4">
+                        <a href="https://github.com/crusaders7/prestigecorp-portfolio" target="_blank" class="btn-primary">
+                            View on GitHub
+                        </a>
+                        <a href="#" class="btn-secondary">
+                            Live Demo Above
+                        </a>
+                    </div>
+                </div>
             </div>
         </section>
     </main>
@@ -219,58 +313,273 @@
     <!-- Footer -->
     <footer class="bg-gray-900/50 border-t border-gray-800">
         <div class="container mx-auto px-6 py-6 text-center text-gray-400">
-            <p>&copy; 2024 PrestigeCorp. Designed & Built with passion.</p>
+            <p>&copy; 2024 PrestigeCorp. All rights reserved.</p>
         </div>
     </footer>
 
-    <!-- JavaScript for animations -->
+    <!-- JavaScript for Demo -->
     <script>
-        // Typing Effect
-        document.addEventListener('DOMContentLoaded', function() {
-            const words = ["Web Scrapers.", "Automation Scripts.", "AI Systems.", "Efficient Software."];
-            let i = 0;
-            let j = 0;
-            let currentWord = "";
-            let isDeleting = false;
-            const typingEffectElement = document.getElementById('typing-effect');
+        // API endpoints
+        const API_BASE = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000/api' 
+            : '/api';
+        
+        let searchResults = [];
+        let scrapedArticles = [];
+        let currentQuery = '';
 
-            function type() {
-                currentWord = words[i];
-                if (isDeleting) {
-                    j--;
-                    typingEffectElement.innerHTML = currentWord.substring(0, j);
-                } else {
-                    j++;
-                    typingEffectElement.innerHTML = currentWord.substring(0, j);
-                }
+        function getSelectedSources() {
+            const sources = [];
+            if (document.getElementById('source-mercury').checked) sources.push('mercury');
+            if (document.getElementById('source-abc').checked) sources.push('abc');
+            if (document.getElementById('source-guardian').checked) sources.push('guardian');
+            return sources;
+        }
 
-                if (!isDeleting && j === currentWord.length) {
-                    isDeleting = true;
-                    setTimeout(type, 2000);
-                } else if (isDeleting && j === 0) {
-                    isDeleting = false;
-                    i = (i + 1) % words.length;
-                    setTimeout(type, 500);
-                } else {
-                    let typeSpeed = isDeleting ? 50 : 120;
-                    setTimeout(type, typeSpeed);
-                }
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.className = 'p-4 rounded-lg';
+            
+            if (type === 'error') {
+                statusDiv.className += ' bg-red-900/50 border border-red-700 text-red-300';
+            } else if (type === 'success') {
+                statusDiv.className += ' bg-green-900/50 border border-green-700 text-green-300';
+            } else {
+                statusDiv.className += ' bg-blue-900/50 border border-blue-700 text-blue-300';
             }
-            type();
+            
+            statusDiv.textContent = message;
+            statusDiv.classList.remove('hidden');
+        }
 
-            // Scroll Animations
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('visible');
-                    }
+        function hideStatus() {
+            document.getElementById('statusMessage').classList.add('hidden');
+        }
+
+        async function searchArticles() {
+            const query = document.getElementById('searchQuery').value.trim();
+            const maxResults = parseInt(document.getElementById('maxResults').value) || 10;
+            const selectedSources = getSelectedSources();
+            
+            if (!query) {
+                showStatus('Please enter a search term', 'error');
+                return;
+            }
+            
+            if (selectedSources.length === 0) {
+                showStatus('Please select at least one news source', 'error');
+                return;
+            }
+            
+            currentQuery = query;
+            const searchBtn = document.getElementById('searchBtn');
+            searchBtn.disabled = true;
+            searchBtn.innerHTML = 'Searching... <span class="loading ml-2"></span>';
+            
+            showStatus(`Searching ${selectedSources.length} source(s) for "${query}"...`, 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/search`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        query, 
+                        max_results: maxResults,
+                        sources: selectedSources 
+                    }),
                 });
-            }, {
-                threshold: 0.1
-            });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Search failed');
+                }
+                
+                searchResults = data.urls;
+                displaySearchResults();
+                showStatus(`Found ${data.found} articles for "${query}" from ${selectedSources.join(', ')}`, 'success');
+                
+            } catch (error) {
+                showStatus(error.message || 'Search failed. Please try again.', 'error');
+                document.getElementById('resultsSection').classList.add('hidden');
+            } finally {
+                searchBtn.disabled = false;
+                searchBtn.innerHTML = 'Search Articles';
+            }
+        }
 
-            const fadeElements = document.querySelectorAll('.fade-in');
-            fadeElements.forEach(el => observer.observe(el));
+        function displaySearchResults() {
+            const resultsSection = document.getElementById('resultsSection');
+            const articlesList = document.getElementById('articlesList');
+            
+            articlesList.innerHTML = searchResults.map((url, index) => {
+                // Extract source from URL
+                let source = 'Unknown';
+                if (url.includes('illawarramercury')) source = 'Illawarra Mercury';
+                else if (url.includes('abc.net.au')) source = 'ABC News';
+                else if (url.includes('theguardian')) source = 'The Guardian';
+                
+                // Extract a preview from the URL
+                const urlParts = url.split('/');
+                const storyPart = urlParts[urlParts.length - 1] || urlParts[urlParts.length - 2] || '';
+                const preview = storyPart.replace(/-/g, ' ').substring(0, 100) + '...';
+                
+                return `
+                    <div class="article-card">
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="font-semibold text-white">Article ${index + 1}</h4>
+                            <span class="text-xs px-2 py-1 bg-indigo-600/20 text-indigo-300 rounded">${source}</span>
+                        </div>
+                        <p class="text-gray-400 text-sm mb-2">${preview}</p>
+                        <a href="${url}" target="_blank" class="text-indigo-400 text-sm hover:underline">View original →</a>
+                    </div>
+                `;
+            }).join('');
+            
+            resultsSection.classList.remove('hidden');
+            document.getElementById('downloadSection').classList.add('hidden');
+            scrapedArticles = []; // Reset scraped articles
+        }
+
+        async function scrapeArticles() {
+            if (searchResults.length === 0) {
+                showStatus('No articles to scrape', 'error');
+                return;
+            }
+            
+            const scrapeBtn = document.getElementById('scrapeBtn');
+            scrapeBtn.disabled = true;
+            scrapeBtn.innerHTML = 'Scraping... <span class="loading ml-2"></span>';
+            
+            showStatus(`Scraping ${searchResults.length} articles... This may take a moment.`, 'info');
+            
+            const progressContainer = document.getElementById('progressContainer');
+            const progressFill = document.getElementById('progressFill');
+            progressContainer.classList.remove('hidden');
+            progressFill.style.width = '0%';
+            
+            try {
+                const response = await fetch(`${API_BASE}/scrape`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        urls: searchResults,
+                        query: currentQuery 
+                    }),
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Scraping failed');
+                }
+                
+                scrapedArticles = data.articles;
+                progressFill.style.width = '100%';
+                
+                displayScrapedArticles();
+                showStatus(`Successfully scraped ${data.scraped} articles`, 'success');
+                
+            } catch (error) {
+                showStatus(error.message || 'Scraping failed. Please try again.', 'error');
+            } finally {
+                scrapeBtn.disabled = false;
+                scrapeBtn.innerHTML = 'Scrape All Articles';
+                setTimeout(() => {
+                    progressContainer.classList.add('hidden');
+                    progressFill.style.width = '0%';
+                }, 1000);
+            }
+        }
+
+        function displayScrapedArticles() {
+            const articlesList = document.getElementById('articlesList');
+            
+            articlesList.innerHTML = scrapedArticles.map((article, index) => {
+                // Extract source from URL
+                let source = 'Unknown';
+                if (article.url.includes('illawarramercury')) source = 'Illawarra Mercury';
+                else if (article.url.includes('abc.net.au')) source = 'ABC News';
+                else if (article.url.includes('theguardian')) source = 'The Guardian';
+                
+                return `
+                    <div class="article-card" onclick="toggleArticle(${index})">
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="font-semibold text-white">${article.title}</h4>
+                            <span class="text-xs px-2 py-1 bg-indigo-600/20 text-indigo-300 rounded">${source}</span>
+                        </div>
+                        <p class="text-gray-400 text-sm mb-2">
+                            ${article.date ? `Date: ${article.date} | ` : ''}
+                            Click to read full article
+                        </p>
+                        <div id="article-content-${index}" class="hidden mt-4 text-gray-300 text-sm">
+                            ${article.content.substring(0, 500)}...
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('downloadSection').classList.remove('hidden');
+        }
+
+        function toggleArticle(index) {
+            const contentDiv = document.getElementById(`article-content-${index}`);
+            contentDiv.classList.toggle('hidden');
+        }
+
+        async function downloadArticles(format) {
+            if (scrapedArticles.length === 0) {
+                showStatus('No articles to download', 'error');
+                return;
+            }
+            
+            showStatus(`Preparing ${format.toUpperCase()} download...`, 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/download`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        articles: scrapedArticles,
+                        format: format 
+                    }),
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Download failed');
+                }
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = format === 'json' 
+                    ? `newspaper_articles_${currentQuery.replace(/\s+/g, '_')}.json`
+                    : `newspaper_articles_${currentQuery.replace(/\s+/g, '_')}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showStatus(`Downloaded ${scrapedArticles.length} articles as ${format.toUpperCase()}`, 'success');
+                
+            } catch (error) {
+                showStatus(error.message || 'Download failed', 'error');
+            }
+        }
+
+        // Allow Enter key to submit search
+        document.getElementById('searchQuery').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchArticles();
+            }
         });
     </script>
 </body>
