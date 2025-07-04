@@ -1,16 +1,16 @@
-{
-  "functions": {
-    "api/search.py": {
-      "runtime": "python3.12",
-      "maxDuration": 15
-    },
-    "api/scrape.py": {
-      "runtime": "python3.12",
-      "maxDuration": 25
-    },
-    "api/download.py": {
-      "runtime": "python3.12",
-      "maxDuration": 10
+  {
+    "functions": {
+      "api/search.py": {
+        "runtime": "@vercel/python",
+        "maxDuration": 15
+      },
+      "api/scrape.py": {
+        "runtime": "@vercel/python",
+        "maxDuration": 25
+      },
+      "api/download.py": {
+        "runtime": "@vercel/python",
+        "maxDuration": 10
+      }
     }
   }
-}
