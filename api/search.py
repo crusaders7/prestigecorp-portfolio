@@ -21,37 +21,16 @@ class handler(BaseHTTPRequestHandler):
             
             query = data.get('query', '').strip()
             max_results = min(data.get('max_results', 10), 20)
-            selected_sources = data.get('sources', ['mercury', 'abc', 'guardian'])
             
             if not query:
                 self.send_error_response(400, 'Please enter a search term')
                 return
             
-            if not selected_sources:
-                self.send_error_response(400, 'Please select at least one source')
-                return
+            # Search Illawarra Mercury
+            article_urls = self.search_illawarra_mercury(query, max_results)
             
-            # Search selected sources
-            article_urls = []
-            results_per_source = max(max_results // len(selected_sources), 3)
-            
-            if 'mercury' in selected_sources:
-                mercury_urls = self.search_illawarra_mercury(query, results_per_source)
-                article_urls.extend(mercury_urls)
-            
-            if 'abc' in selected_sources:
-                abc_urls = self.search_abc_news(query, results_per_source)
-                article_urls.extend(abc_urls)
-            
-            if 'guardian' in selected_sources:
-                guardian_urls = self.search_guardian_au(query, results_per_source)
-                article_urls.extend(guardian_urls)
-            
-            # Remove duplicates and limit
-            unique_urls = list(dict.fromkeys(article_urls))[:max_results]
-            
-            if not unique_urls:
-                self.send_error_response(404, f'No articles found for "{query}" in selected sources. Try different keywords or sources.')
+            if not article_urls:
+                self.send_error_response(404, f'No articles found for "{query}" in Illawarra Mercury.')
                 return
             
             # Send successful response
@@ -62,9 +41,9 @@ class handler(BaseHTTPRequestHandler):
             
             response = {
                 'query': query,
-                'found': len(unique_urls),
-                'urls': unique_urls,
-                'sources_searched': selected_sources
+                'found': len(article_urls),
+                'urls': article_urls,
+                'sources_searched': ['mercury']
             }
             
             self.wfile.write(json.dumps(response).encode())
@@ -113,68 +92,6 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             print(f"Illawarra Mercury search error: {e}")
             return []
-    
-    def search_abc_news(self, query, max_results=7):
-        """Search ABC News Australia using Google"""
-        try:
-            # Use Google to search ABC News
-            search_url = f"https://www.google.com/search?q=site:abc.net.au/news+{quote_plus(query)}&num={max_results}"
-            
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-            response = requests.get(search_url, headers=headers, timeout=8)
-            
-            if response.status_code == 200:
-                import re
-                # Extract ABC News URLs from Google results
-                abc_pattern = r'https://www\.abc\.net\.au/news/[^&\s"<>]+'
-                matches = re.findall(abc_pattern, response.text)
-                
-                # Clean and deduplicate URLs
-                clean_urls = []
-                for url in matches:
-                    if url not in clean_urls and len(clean_urls) < max_results:
-                        clean_urls.append(url)
-                
-                time.sleep(0.5)
-                return clean_urls
-                
-        except Exception as e:
-            print(f"ABC News search error: {e}")
-        
-        return []
-    
-    def search_guardian_au(self, query, max_results=6):
-        """Search The Guardian Australia using Google"""
-        try:
-            # Use Google to search Guardian Australia
-            search_url = f"https://www.google.com/search?q=site:theguardian.com/australia-news+{quote_plus(query)}&num={max_results}"
-            
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-            response = requests.get(search_url, headers=headers, timeout=8)
-            
-            if response.status_code == 200:
-                import re
-                # Extract Guardian URLs from Google results
-                guardian_pattern = r'https://www\.theguardian\.com/australia-news/[^&\s"<>]+'
-                matches = re.findall(guardian_pattern, response.text)
-                
-                # Clean and deduplicate URLs
-                clean_urls = []
-                for url in matches:
-                    if url not in clean_urls and '/live/' not in url and len(clean_urls) < max_results:
-                        clean_urls.append(url)
-                
-                time.sleep(0.5)
-                return clean_urls
-                
-        except Exception as e:
-            print(f"Guardian search error: {e}")
-        
-        return []
     
     def send_error_response(self, code, message):
         self.send_response(code)
