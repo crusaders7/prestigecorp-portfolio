@@ -1,15 +1,12 @@
 {
   "functions": {
     "api/search.py": {
-      "runtime": "python3.9",
       "maxDuration": 15
     },
     "api/scrape.py": {
-      "runtime": "python3.9",
       "maxDuration": 25
     },
     "api/download.py": {
-      "runtime": "python3.9",
       "maxDuration": 10
     }
   }
