@@ -1,13 +1,7 @@
 {
   "functions": {
-    "api/search.py": {
-      "maxDuration": 15
-    },
-    "api/scrape.py": {
+    "api/*.py": {
       "maxDuration": 25
-    },
-    "api/download.py": {
-      "maxDuration": 10
     }
   }
 }
