@@ -1,10 +1,9 @@
-# api/download.py
+# filepath: projects/newspaperscraper/api/download.py
 from http.server import BaseHTTPRequestHandler
 import json
 from urllib.parse import quote
 import io
 import zipfile
-
 
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
@@ -29,25 +28,20 @@ class handler(BaseHTTPRequestHandler):
         file_format = data.get('format', 'json').lower()
 
         if file_format == 'zip':
-            # Create a ZIP file in memory
             zip_buffer = io.BytesIO()
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                zip_file.writestr(
-                    'articles.json', json.dumps(articles, indent=2))
+                zip_file.writestr('articles.json', json.dumps(articles, indent=2))
             zip_buffer.seek(0)
             self.send_response(200)
             self.send_header('Content-Type', 'application/zip')
-            self.send_header(
-                'Content-Disposition', f'attachment; filename="{filename.replace(".json", ".zip")}"')
+            self.send_header('Content-Disposition', f'attachment; filename="{filename.replace(".json", ".zip")}"')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(zip_buffer.read())
         else:
-            # Default: return JSON
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
-            self.send_header('Content-Disposition',
-                             f'attachment; filename="{filename}"')
+            self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(json.dumps(articles, indent=2).encode())
