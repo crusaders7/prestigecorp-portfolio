@@ -55,28 +55,23 @@ class handler(BaseHTTPRequestHandler):
     def search_illawarra_mercury(self, query, max_results=7):
         """Search Illawarra Mercury with improved relevance filtering."""
         try:
-            import requests
-            from bs4 import BeautifulSoup
-            from urllib.parse import quote_plus, urljoin
-            import time
-
             base_url = "https://www.illawarramercury.com.au"
             search_url = f"{base_url}/search/?q={quote_plus(query)}"
+            
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
             response = requests.get(search_url, headers=headers, timeout=8)
             response.raise_for_status()
-
+            
             soup = BeautifulSoup(response.content, 'html.parser')
             article_links = []
 
-            # Find all article result blocks (adjust selector if needed)
-            for link in soup.select('a[href*="/story/"]'):
-                title_text = link.get_text(strip=True)
-                href = link.get('href', '')
+            # Filter links by title relevance
+            for result in soup.select('a[href*="/story/"]'):
+                title_text = result.get_text(strip=True)
+                href = result.get('href', '')
                 if href and '/story/' in href:
-                    # Only include if the query is in the title (case-insensitive)
                     if query.lower() in title_text.lower():
                         full_url = urljoin(base_url, href)
                         if full_url not in article_links:
