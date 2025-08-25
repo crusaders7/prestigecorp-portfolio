@@ -53,7 +53,7 @@ class handler(BaseHTTPRequestHandler):
             self.send_error_response(500, f'Search failed: {str(e)}')
     
     def search_illawarra_mercury(self, query, max_results=7):
-        """Search Illawarra Mercury"""
+        """Search Illawarra Mercury with improved relevance filtering."""
         try:
             base_url = "https://www.illawarramercury.com.au"
             search_url = f"{base_url}/search/?q={quote_plus(query)}"
@@ -66,29 +66,22 @@ class handler(BaseHTTPRequestHandler):
             
             soup = BeautifulSoup(response.content, 'html.parser')
             article_links = []
-            
-            # Try multiple selectors
-            selectors = [
-                'a[href*="/story/"]',
-                'h2 a, h3 a',
-                'article a',
-                '.search-results a'
-            ]
-            
-            for selector in selectors:
-                links = soup.select(selector)
-                for link in links:
-                    href = link.get('href', '')
-                    if href and '/story/' in href:
+
+            # Filter links by title relevance
+            for result in soup.select('a[href*="/story/"]'):
+                title_text = result.get_text(strip=True)
+                href = result.get('href', '')
+                if href and '/story/' in href:
+                    if query.lower() in title_text.lower():
                         full_url = urljoin(base_url, href)
                         if full_url not in article_links:
                             article_links.append(full_url)
                             if len(article_links) >= max_results:
-                                return article_links
-            
+                                break
+
             time.sleep(0.5)
             return article_links
-            
+
         except Exception as e:
             print(f"Illawarra Mercury search error: {e}")
             return []
