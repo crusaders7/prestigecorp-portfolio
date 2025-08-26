@@ -328,15 +328,23 @@
                     body: JSON.stringify({ query, max_results: maxResults }),
                 });
                 
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || 'Search failed');
+                let data;
+                try {
+                    data = await response.json();
+                } catch (jsonError) {
+                    // If response is not JSON, try to get text for debugging
+                    const textResponse = await response.text();
+                    console.error('Non-JSON response:', textResponse);
+                    throw new Error('Server returned invalid response format. Please try again.');
                 }
                 
-                searchResults = data.urls;
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP ${response.status}: Search failed`);
+                }
+                
+                searchResults = data.urls || [];
                 displaySearchResults();
-                showStatus(`Found ${data.found} articles for "${query}"`, 'success');
+                showStatus(`Found ${data.found || searchResults.length} articles for "${query}"`, 'success');
                 
             } catch (error) {
                 showStatus(error.message || 'Search failed. Please try again.', 'error');
@@ -400,17 +408,24 @@
                     }),
                 });
                 
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || 'Scraping failed');
+                let data;
+                try {
+                    data = await response.json();
+                } catch (jsonError) {
+                    const textResponse = await response.text();
+                    console.error('Non-JSON response:', textResponse);
+                    throw new Error('Server returned invalid response format. Please try again.');
                 }
                 
-                scrapedArticles = data.articles;
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP ${response.status}: Scraping failed`);
+                }
+                
+                scrapedArticles = data.articles || [];
                 progressFill.style.width = '100%';
                 
                 displayScrapedArticles();
-                showStatus(`Successfully scraped ${data.scraped} articles`, 'success');
+                showStatus(`Successfully scraped ${data.scraped || scrapedArticles.length} articles`, 'success');
                 
             } catch (error) {
                 showStatus(error.message || 'Scraping failed. Please try again.', 'error');
@@ -469,8 +484,15 @@
                 });
                 
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Download failed');
+                    let errorMessage;
+                    try {
+                        const error = await response.json();
+                        errorMessage = error.error || `HTTP ${response.status}: Download failed`;
+                    } catch (jsonError) {
+                        // If error response is not JSON, use status text
+                        errorMessage = `HTTP ${response.status}: ${response.statusText || 'Download failed'}`;
+                    }
+                    throw new Error(errorMessage);
                 }
                 
                 const blob = await response.blob();
