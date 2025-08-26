@@ -293,8 +293,8 @@
     <script>
         // API endpoints - will use relative URLs when deployed
         const API_BASE = window.location.hostname === 'localhost'
-            ? 'http://localhost:3000/projects/newspaperscraper/api'
-            : '/projects/newspaperscraper/api';
+            ? 'http://localhost:3000/api'
+            : '/api';
 
         let searchResults = [];
         let scrapedArticles = [];
@@ -336,10 +336,10 @@
 
             showStatus('Searching for articles...', 'info');
             console.log('API_BASE is:', API_BASE);
-            console.log('Full search URL:', `${API_BASE}/search`);
+            console.log('Full search URL:', `${API_BASE}/news-search`);
 
             try {
-                const response = await fetch(`${API_BASE}/search`, {
+                const response = await fetch(`${API_BASE}/news-search`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -432,7 +432,7 @@
             progressFill.style.width = '0%';
 
             try {
-                const response = await fetch(`${API_BASE}/scrape`, {
+                const response = await fetch(`${API_BASE}/news-scrape`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -524,7 +524,7 @@
             showStatus(`Preparing ${format.toUpperCase()} download...`, 'info');
 
             try {
-                const response = await fetch(`${API_BASE}/download`, {
+                const response = await fetch(`${API_BASE}/news-download`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

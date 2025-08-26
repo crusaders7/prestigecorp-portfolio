@@ -3,10 +3,6 @@
     "api/*.py": {
       "runtime": "python3.11",
       "maxDuration": 25
-    },
-    "projects/newspaperscraper/api/*.py": {
-      "runtime": "python3.11",
-      "maxDuration": 25
     }
   }
 }
