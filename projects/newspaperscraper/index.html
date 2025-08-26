@@ -336,10 +336,10 @@
 
             showStatus('Searching for articles...', 'info');
             console.log('API_BASE is:', API_BASE);
-            console.log('Full search URL:', `${API_BASE}/news-search`);
+            console.log('Full search URL:', `${API_BASE}/search`);
 
             try {
-                const response = await fetch(`${API_BASE}/news-search`, {
+                const response = await fetch(`${API_BASE}/search`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -432,7 +432,7 @@
             progressFill.style.width = '0%';
 
             try {
-                const response = await fetch(`${API_BASE}/news-scrape`, {
+                const response = await fetch(`${API_BASE}/scrape`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -524,7 +524,7 @@
             showStatus(`Preparing ${format.toUpperCase()} download...`, 'info');
 
             try {
-                const response = await fetch(`${API_BASE}/news-download`, {
+                const response = await fetch(`${API_BASE}/download`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
