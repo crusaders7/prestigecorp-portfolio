@@ -293,8 +293,8 @@
     <script>
         // API endpoints - will use relative URLs when deployed
         const API_BASE = window.location.hostname === 'localhost'
-            ? 'http://localhost:3000/api'
-            : '/api';
+            ? 'http://localhost:3000/projects/newspaperscraper/api'
+            : '/projects/newspaperscraper/api';
 
         let searchResults = [];
         let scrapedArticles = [];
@@ -347,13 +347,28 @@
 
                 // Read the response text once
                 const responseText = await response.text();
+                console.log('Search Response status:', response.status);
+                console.log('Search Response text length:', responseText.length);
+                console.log('Search Response text preview:', responseText.substring(0, 200));
 
                 let data;
                 try {
                     data = JSON.parse(responseText);
                 } catch (jsonError) {
-                    console.error('Non-JSON response:', responseText);
-                    throw new Error('Server returned invalid response format. Please try again.');
+                    console.error('Search JSON parsing failed:', jsonError.message);
+                    console.error('Search Full response text:', responseText);
+
+                    // Check if it's an HTML error page
+                    if (responseText.trim().startsWith('<') || responseText.includes('<!DOCTYPE')) {
+                        throw new Error('Server returned an HTML error page instead of JSON. Please check server logs.');
+                    }
+
+                    // Check if response is empty
+                    if (!responseText.trim()) {
+                        throw new Error('Server returned empty response.');
+                    }
+
+                    throw new Error(`Server returned invalid JSON. Response: ${responseText.substring(0, 100)}...`);
                 }
 
                 if (!response.ok) {
@@ -428,13 +443,28 @@
 
                 // Read the response text once
                 const responseText = await response.text();
+                console.log('Scrape Response status:', response.status);
+                console.log('Scrape Response text length:', responseText.length);
+                console.log('Scrape Response text preview:', responseText.substring(0, 200));
 
                 let data;
                 try {
                     data = JSON.parse(responseText);
                 } catch (jsonError) {
-                    console.error('Non-JSON response:', responseText);
-                    throw new Error('Server returned invalid response format. Please try again.');
+                    console.error('Scrape JSON parsing failed:', jsonError.message);
+                    console.error('Scrape Full response text:', responseText);
+
+                    // Check if it's an HTML error page
+                    if (responseText.trim().startsWith('<') || responseText.includes('<!DOCTYPE')) {
+                        throw new Error('Server returned an HTML error page instead of JSON. Please check server logs.');
+                    }
+
+                    // Check if response is empty
+                    if (!responseText.trim()) {
+                        throw new Error('Server returned empty response.');
+                    }
+
+                    throw new Error(`Server returned invalid JSON. Response: ${responseText.substring(0, 100)}...`);
                 }
 
                 if (!response.ok) {
