@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote_plus, urljoin
 
+
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(200)
@@ -18,20 +19,21 @@ class handler(BaseHTTPRequestHandler):
             if content_length == 0:
                 self.send_error_response(400, 'No data received')
                 return
-                
+
             post_data = self.rfile.read(content_length)
-            
+
             try:
                 data = json.loads(post_data.decode('utf-8'))
             except json.JSONDecodeError as e:
                 self.send_error_response(400, f'Invalid JSON data: {str(e)}')
                 return
             except UnicodeDecodeError as e:
-                self.send_error_response(400, f'Invalid UTF-8 encoding: {str(e)}')
+                self.send_error_response(
+                    400, f'Invalid UTF-8 encoding: {str(e)}')
                 return
 
             query = data.get('query', '').strip()
-            
+
             try:
                 max_results = min(int(data.get('max_results', 10)), 20)
             except (ValueError, TypeError):
@@ -44,7 +46,8 @@ class handler(BaseHTTPRequestHandler):
             article_urls = self.search_illawarra_mercury(query, max_results)
 
             if not article_urls:
-                self.send_error_response(404, f'No articles found for \"{query}\" in Illawarra Mercury.')
+                self.send_error_response(
+                    404, f'No articles found for \"{query}\" in Illawarra Mercury.')
                 return
 
             self.send_response(200)
@@ -58,7 +61,7 @@ class handler(BaseHTTPRequestHandler):
                 'sources_searched': ['mercury']
             }
             self.wfile.write(json.dumps(response).encode())
-            
+
         except Exception as e:
             # Catch any unexpected errors and return proper JSON response
             print(f"Unexpected error in do_POST: {e}")
@@ -71,18 +74,18 @@ class handler(BaseHTTPRequestHandler):
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
-            
+
             print(f"Searching URL: {search_url}")
             response = requests.get(search_url, headers=headers, timeout=10)
             response.raise_for_status()
-            
+
             soup = BeautifulSoup(response.content, 'html.parser')
             article_links = []
-            
+
             # Look for article links
             links = soup.select('a[href*="/story/"]')
             print(f"Found {len(links)} potential article links")
-            
+
             for link in links:
                 title_text = link.get_text(strip=True)
                 href = link.get('href', '')
@@ -96,10 +99,10 @@ class handler(BaseHTTPRequestHandler):
                             print(f"Added article: {title_text[:50]}...")
                             if len(article_links) >= max_results:
                                 break
-            
+
             print(f"Final result: {len(article_links)} articles found")
             return article_links
-            
+
         except requests.exceptions.Timeout:
             print(f"Timeout error while searching for: {query}")
             return []
@@ -107,10 +110,12 @@ class handler(BaseHTTPRequestHandler):
             print(f"Connection error while searching for: {query}")
             return []
         except requests.exceptions.HTTPError as e:
-            print(f"HTTP error {e.response.status_code} while searching for: {query}")
+            print(
+                f"HTTP error {e.response.status_code} while searching for: {query}")
             return []
         except Exception as e:
-            print(f"Unexpected error in Illawarra Mercury search: {type(e).__name__}: {e}")
+            print(
+                f"Unexpected error in Illawarra Mercury search: {type(e).__name__}: {e}")
             return []
 
     def send_error_response(self, code, message):
@@ -131,4 +136,5 @@ class handler(BaseHTTPRequestHandler):
                 self.wfile.write(b'Internal server error')
             except:
                 # If all else fails, at least log the error
-                print(f"Critical error - unable to send any response: {message}")
+                print(
+                    f"Critical error - unable to send any response: {message}")
