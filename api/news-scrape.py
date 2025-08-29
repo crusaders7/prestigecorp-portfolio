@@ -1,3 +1,4 @@
+# api/news-scrape.py
 from http.server import BaseHTTPRequestHandler
 import json
 import requests
@@ -52,33 +53,21 @@ class handler(BaseHTTPRequestHandler):
 
                     # Try to get article content
                     content_selectors = [
-                        'div.article-content',
                         'div.story-content',
+                        'div.article-content',
                         'div.entry-content',
                         'article',
-                        'div.post-content',
-                        'div.content',
-                        'div.article-body',
-                        'div.story-body'
+                        'div[class*="content"]'
                     ]
 
                     content = ''
                     for selector in content_selectors:
                         content_div = soup.select_one(selector)
                         if content_div:
-                            # Get all paragraphs and divs with text content
-                            elements = content_div.find_all(
-                                ['p', 'h2', 'h3', 'div', 'span'], recursive=False)
-                            content_parts = []
-
-                            for elem in elements:
-                                # Skip empty elements
-                                text = elem.get_text(strip=True)
-                                if text and len(text) > 20:  # Skip very short elements
-                                    content_parts.append(text)
-
-                            content = ' '.join(content_parts)
-                            print(f"Found content using selector: {selector}")
+                            # Extract text and clean it up
+                            paragraphs = content_div.find_all('p')
+                            content = ' '.join(
+                                [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)])
                             break
 
                     # Fallback to meta description if no content found
@@ -91,6 +80,7 @@ class handler(BaseHTTPRequestHandler):
                             except (AttributeError, TypeError):
                                 content = ''
                         else:
+                            # Last resort: first few paragraphs
                             paragraphs = soup.find_all('p')[:3]
                             content = ' '.join(
                                 [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)])
@@ -103,49 +93,44 @@ class handler(BaseHTTPRequestHandler):
                     date_str = ''
                     if date:
                         try:
-                            # Try to get datetime attribute first
                             date_str = date.get('datetime', '')
-
-                            # If no datetime, get text content
-                            if not date_str:
-                                date_str = date.get_text(strip=True)
                         except (AttributeError, TypeError):
                             date_str = ''
-
-                    # If no date found in time tag, try meta tags
-                    if not date_str:
-                        date_meta = soup.find(
-                            'meta', attrs={'name': 'pubdate'})
-                        if date_meta:
-                            date_str = date_meta.get('content', '')
-                        else:
-                            date_meta = soup.find(
-                                'meta', attrs={'property': 'article:published_time'})
-                            if date_meta:
-                                date_str = date_meta.get('content', '')
 
                     results.append({
                         'url': url,
                         'title': title.get_text(strip=True) if title else 'No title found',
                         'date': date_str,
+                        # Limit content length
                         'content': content[:2000] + '...' if len(content) > 2000 else content
                     })
                     scraped_count += 1
 
                 except requests.exceptions.Timeout:
                     print(f"Timeout scraping: {url}")
-                    results.append({'url': url, 'error': 'Request timeout'})
+                    results.append({
+                        'url': url,
+                        'error': 'Request timeout'
+                    })
                 except requests.exceptions.ConnectionError:
                     print(f"Connection error scraping: {url}")
-                    results.append({'url': url, 'error': 'Connection error'})
+                    results.append({
+                        'url': url,
+                        'error': 'Connection error'
+                    })
                 except requests.exceptions.HTTPError as e:
                     print(
                         f"HTTP error {e.response.status_code} scraping: {url}")
-                    results.append(
-                        {'url': url, 'error': f'HTTP {e.response.status_code} error'})
+                    results.append({
+                        'url': url,
+                        'error': f'HTTP {e.response.status_code} error'
+                    })
                 except Exception as e:
                     print(f"Error scraping {url}: {type(e).__name__}: {e}")
-                    results.append({'url': url, 'error': str(e)})
+                    results.append({
+                        'url': url,
+                        'error': str(e)
+                    })
 
             self.send_response(200)
             self.send_header('Content-type', 'application/json')

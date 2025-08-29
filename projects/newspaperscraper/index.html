@@ -124,11 +124,30 @@
                             <input type="text" id="searchQuery"
                                 placeholder="Enter search term (e.g., climate change, technology, sports)"
                                 class="search-input flex-1">
-                            <input type="number" id="maxResults" placeholder="Max articles" value="10" min="1" max="50"
+                            <input type="number" id="maxResults" placeholder="Max articles" value="10" min="1" max="20"
                                 class="search-input w-full md:w-32">
                             <button id="searchBtn" onclick="searchArticles()" class="btn-primary whitespace-nowrap">
                                 Search Articles
                             </button>
+                        </div>
+
+                        <!-- Source Selection -->
+                        <div class="mt-4">
+                            <label class="text-sm font-medium text-gray-300 mb-2 block">News Sources:</label>
+                            <div class="flex flex-wrap gap-3">
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="source-mercury" checked class="mr-2">
+                                    <span class="text-sm text-gray-300">Illawarra Mercury</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="source-abc" checked class="mr-2">
+                                    <span class="text-sm text-gray-300">ABC News</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="source-guardian" checked class="mr-2">
+                                    <span class="text-sm text-gray-300">The Guardian</span>
+                                </label>
+                            </div>
                         </div>
 
                         <!-- Status Message -->
@@ -324,8 +343,19 @@
             const query = document.getElementById('searchQuery').value.trim();
             const maxResults = parseInt(document.getElementById('maxResults').value) || 10;
 
+            // Get selected sources
+            const sources = [];
+            if (document.getElementById('source-mercury').checked) sources.push('mercury');
+            if (document.getElementById('source-abc').checked) sources.push('abc');
+            if (document.getElementById('source-guardian').checked) sources.push('guardian');
+
             if (!query) {
                 showStatus('Please enter a search term', 'error');
+                return;
+            }
+
+            if (sources.length === 0) {
+                showStatus('Please select at least one news source', 'error');
                 return;
             }
 
@@ -344,7 +374,11 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ query, max_results: maxResults }),
+                    body: JSON.stringify({
+                        query,
+                        max_results: maxResults,
+                        sources: sources
+                    }),
                 });
 
                 // Read the response text once
@@ -379,7 +413,8 @@
 
                 searchResults = data.urls || [];
                 displaySearchResults();
-                showStatus(`Found ${data.found || searchResults.length} articles for "${query}"`, 'success');
+                const sourcesText = data.sources_searched ? ` from ${data.sources_searched.join(', ')}` : '';
+                showStatus(`Found ${data.found || searchResults.length} articles for "${query}"${sourcesText}`, 'success');
 
             } catch (error) {
                 showStatus(error.message || 'Search failed. Please try again.', 'error');
@@ -578,81 +613,3 @@
 </body>
 
 </html>
-from http.server import BaseHTTPRequestHandler
-import json
-import requests
-from bs4 import BeautifulSoup
-from urllib.parse import quote_plus, urljoin
-
-class handler(BaseHTTPRequestHandler):
-def do_OPTIONS(self):
-self.send_response(200)
-self.send_header('Access-Control-Allow-Origin', '*')
-self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-self.end_headers()
-
-def do_POST(self):
-content_length = int(self.headers.get('Content-Length', 0))
-post_data = self.rfile.read(content_length)
-data = json.loads(post_data.decode('utf-8'))
-
-query = data.get('query', '').strip()
-max_results = min(int(data.get('max_results', 10)), 20)
-
-if not query:
-self.send_error_response(400, 'Please enter a search term')
-return
-
-article_urls = self.search_illawarra_mercury(query, max_results)
-
-if not article_urls:
-self.send_error_response(404, f'No articles found for \"{query}\" in Illawarra Mercury.')
-return
-
-self.send_response(200)
-self.send_header('Content-type', 'application/json')
-self.send_header('Access-Control-Allow-Origin', '*')
-self.end_headers()
-response = {
-'query': query,
-'found': len(article_urls),
-'urls': article_urls,
-'sources_searched': ['mercury']
-}
-self.wfile.write(json.dumps(response).encode())
-
-def search_illawarra_mercury(self, query, max_results=7):
-try:
-base_url = "https://www.illawarramercury.com.au"
-search_url = f"{base_url}/search/?q={quote_plus(query)}"
-headers = {
-'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124
-Safari/537.36'
-}
-response = requests.get(search_url, headers=headers, timeout=8)
-response.raise_for_status()
-soup = BeautifulSoup(response.content, 'html.parser')
-article_links = []
-for link in soup.select('a[href*="/story/"]'):
-title_text = link.get_text(strip=True)
-href = link.get('href', '')
-if href and '/story/' in href:
-if query.lower() in title_text.lower():
-full_url = urljoin(base_url, href)
-if full_url not in article_links:
-article_links.append(full_url)
-if len(article_links) >= max_results:
-break
-return article_links
-except Exception as e:
-print(f"Illawarra Mercury search error: {e}")
-return []
-
-def send_error_response(self, code, message):
-self.send_response(code)
-self.send_header('Content-type', 'application/json')
-self.send_header('Access-Control-Allow-Origin', '*')
-self.end_headers()
-error_response = {'error': message}
-self.wfile.write(json.dumps(error_response).encode())
