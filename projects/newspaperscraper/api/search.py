@@ -112,87 +112,38 @@ class handler(BaseHTTPRequestHandler):
 
     def search_illawarra_mercury(self, query, max_results):
         """Searches the Illawarra Mercury website for a given query using DuckDuckGo."""
-        urls = []
-        seen_urls = set()
-
-        # Start with a GET request to get the 's' parameter
-        search_url = "https://html.duckduckgo.com/html/"
-        params = {'q': f'site:illawarramercury.com.au {query}'}
-
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-        }
-
-        s = ''
-        vqd = ''
-        # Make the initial request to get the vqd token
         try:
-            resp = requests.get(search_url, headers=headers, params=params)
-            resp.raise_for_status()
-            soup = BeautifulSoup(resp.text, 'lxml')
-
-            # Extract vqd from the form
-            vqd_input = soup.find('input', attrs={'name': 'vqd'})
-            if vqd_input:
-                vqd = vqd_input['value']
-
-        except requests.exceptions.RequestException as e:
-            print(f"Initial DDG search request failed: {e}")
-            return []
-
-        # Now, start paginating with POST requests
-        while len(urls) < max_results:
-            data = {
-                'q': f'site:illawarramercury.com.au {query}',
-                's': s,
-                'nextParams': '',
-                'v': 'l',
-                'o': 'json',
-                'vqd': vqd,
-                'kl': 'wt-wt'
+            search_url = "https://html.duckduckgo.com/html/"
+            params = {'q': f'site:illawarramercury.com.au {query}'}
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
+            
+            resp = requests.get(search_url, headers=headers, params=params, timeout=10)
+            resp.raise_for_status()
+            
+            soup = BeautifulSoup(resp.text, 'lxml')
+            
+            urls = []
+            seen_urls = set()
 
-            try:
-                resp = requests.post(search_url, headers=headers, data=data)
-                resp.raise_for_status()
-                soup = BeautifulSoup(resp.text, 'lxml')
-
-                page_urls = []
-                for link in soup.find_all('a', class_='result__a'):
-                    href = link.get('href')
-                    if href:
-                        # Decode URL-encoded string
-                        clean_url = unquote(href)
-                        # Extract the actual URL from the DDG redirect
-                        match = re.search(r'uddg=([^&]+)', clean_url)
-                        if match:
-                            actual_url = unquote(match.group(1))
-                            if actual_url not in seen_urls and 'illawarramercury.com.au/story/' in actual_url:
-                                seen_urls.add(actual_url)
-                                page_urls.append(actual_url)
-
-                if not page_urls:
-                    break  # No more results
-
-                urls.extend(page_urls)
-
-                # Find the 's' value for the next page
-                next_form = soup.find('form', class_='next_form')
-                if next_form:
-                    s_input = next_form.find('input', {'name': 's'})
-                    if s_input:
-                        s = s_input['value']
-                    else:
-                        break  # No more pages
-                else:
+            for link in soup.find_all('a', class_='result__a'):
+                if len(urls) >= max_results:
                     break
-
-            except requests.exceptions.RequestException as e:
-                print(f"DDG pagination request failed: {e}")
-                break
-
-        return urls[:max_results]
+                
+                href = link.get('href')
+                if href:
+                    clean_url = unquote(href)
+                    match = re.search(r'uddg=([^&]+)', clean_url)
+                    if match:
+                        actual_url = unquote(match.group(1))
+                        if actual_url not in seen_urls and 'illawarramercury.com.au/story/' in actual_url:
+                            seen_urls.add(actual_url)
+                            urls.append(actual_url)
+            return urls
+        except Exception as e:
+            print(f"Error in Illawarra Mercury search: {e}")
+            return []
 
     def search_abc_news(self, query, max_results):
         """Searches ABC News for a given query."""
@@ -207,18 +158,15 @@ class handler(BaseHTTPRequestHandler):
             soup = BeautifulSoup(response.content, 'html.parser')
             article_links = []
 
-            # Updated selector for ABC News search results
+            # A more robust selector for ABC News search results
             for result in soup.select('a[data-component="Link"]'):
-                title_text = result.get_text(strip=True)
                 href = result.get('href', '')
                 if href and '/news/' in href and 'live-updates' not in href:
-                    query_words = query.lower().split()
-                    if any(word in title_text.lower() for word in query_words):
-                        full_url = urljoin(base_url, href)
-                        if full_url not in article_links:
-                            article_links.append(full_url)
-                            if len(article_links) >= max_results:
-                                break
+                    full_url = urljoin(base_url, href)
+                    if full_url not in article_links:
+                        article_links.append(full_url)
+                        if len(article_links) >= max_results:
+                            break
             return article_links
         except Exception as e:
             print(f"Error in ABC News search: {e}")
@@ -237,17 +185,14 @@ class handler(BaseHTTPRequestHandler):
             soup = BeautifulSoup(response.content, 'html.parser')
             article_links = []
 
-            # Updated selector for Guardian search results
+            # A more robust selector for Guardian search results
             for result in soup.select('a[data-testid="result-title-a"]'):
-                title_text = result.get_text(strip=True)
                 href = result.get('href', '')
                 if href:
-                    query_words = query.lower().split()
-                    if any(word in title_text.lower() for word in query_words):
-                        if href not in article_links:
-                            article_links.append(href)
-                            if len(article_links) >= max_results:
-                                break
+                    if href not in article_links:
+                        article_links.append(href)
+                        if len(article_links) >= max_results:
+                            break
             return article_links
         except Exception as e:
             print(f"Error in The Guardian search: {e}")
