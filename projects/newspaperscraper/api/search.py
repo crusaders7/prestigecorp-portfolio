@@ -96,22 +96,17 @@ class handler(BaseHTTPRequestHandler):
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
-
-            print(f"Searching Illawarra Mercury: {search_url}")
             response = requests.get(search_url, headers=headers, timeout=10)
             response.raise_for_status()
-
             soup = BeautifulSoup(response.content, 'html.parser')
             article_links = []
 
-            # More specific selector for search result items
-            for result in soup.select('.css-1s72p3j'):
+            # Updated selector for Illawarra Mercury search results
+            for result in soup.select('.result-tile'):
                 link_tag = result.find('a', href=True)
                 if link_tag:
                     title_text = link_tag.get_text(strip=True)
                     href = link_tag['href']
-
-                    # Check if it's a valid story link and relevant
                     if '/story/' in href:
                         query_words = query.lower().split()
                         if any(word in title_text.lower() for word in query_words):
@@ -120,129 +115,66 @@ class handler(BaseHTTPRequestHandler):
                                 article_links.append(full_url)
                                 if len(article_links) >= max_results:
                                     break
-
-            print(
-                f"Illawarra Mercury result: {len(article_links)} articles found")
             return article_links
-
-        except requests.exceptions.Timeout:
-            print(f"Timeout error while searching for: {query}")
-            return []
-        except requests.exceptions.ConnectionError:
-            print(f"Connection error while searching for: {query}")
-            return []
-        except requests.exceptions.HTTPError as e:
-            print(
-                f"HTTP error {e.response.status_code} while searching for: {query}")
-            return []
         except Exception as e:
-            print(
-                f"Unexpected error in Illawarra Mercury search: {type(e).__name__}: {e}")
+            print(f"Error in Illawarra Mercury search: {e}")
             return []
 
     def search_abc_news(self, query, max_results=7):
         try:
             base_url = "https://www.abc.net.au"
-            # Use the main search page for better results
             search_url = f"https://www.abc.net.au/news/search?query={quote_plus(query)}"
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Educational Research Tool)',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                'User-Agent': 'Mozilla/5.0 (Educational Research Tool)'
             }
-
-            print(f"Searching ABC News: {search_url}")
             response = requests.get(search_url, headers=headers, timeout=10)
             response.raise_for_status()
-
             soup = BeautifulSoup(response.content, 'html.parser')
             article_links = []
 
-            # Selector for ABC News search results
-            for result in soup.select('div._1E3hT'):
-                link_tag = result.find('a', href=True)
-                if link_tag:
-                    title_text = link_tag.get_text(strip=True)
-                    href = link_tag['href']
-
-                    if '/news/' in href:
-                        query_words = query.lower().split()
-                        if any(word in title_text.lower() for word in query_words):
-                            full_url = urljoin(base_url, href)
-                            if full_url not in article_links:
-                                article_links.append(full_url)
-                                if len(article_links) >= max_results:
-                                    break
-
-            print(f"ABC News result: {len(article_links)} articles found")
+            # Updated selector for ABC News search results
+            for result in soup.select('a[data-component="Link"]'):
+                title_text = result.get_text(strip=True)
+                href = result.get('href', '')
+                if href and '/news/' in href and 'live-updates' not in href:
+                    query_words = query.lower().split()
+                    if any(word in title_text.lower() for word in query_words):
+                        full_url = urljoin(base_url, href)
+                        if full_url not in article_links:
+                            article_links.append(full_url)
+                            if len(article_links) >= max_results:
+                                break
             return article_links
-
-        except requests.exceptions.Timeout:
-            print(f"Timeout error while searching ABC News for: {query}")
-            return []
-        except requests.exceptions.ConnectionError:
-            print(f"Connection error while searching ABC News for: {query}")
-            return []
-        except requests.exceptions.HTTPError as e:
-            print(
-                f"HTTP error {e.response.status_code} while searching ABC News for: {query}")
-            return []
         except Exception as e:
-            print(
-                f"Unexpected error in ABC News search: {type(e).__name__}: {e}")
+            print(f"Error in ABC News search: {e}")
             return []
 
     def search_the_guardian(self, query, max_results=7):
         try:
             base_url = "https://www.theguardian.com"
-            # Use general search
             search_url = f"https://www.theguardian.com/search?q={quote_plus(query)}"
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Educational Research Tool)',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                'User-Agent': 'Mozilla/5.0 (Educational Research Tool)'
             }
-
-            print(f"Searching The Guardian: {search_url}")
             response = requests.get(search_url, headers=headers, timeout=10)
             response.raise_for_status()
-
             soup = BeautifulSoup(response.content, 'html.parser')
             article_links = []
 
-            # Selector for Guardian search results
-            for result in soup.select('div.fc-item__container'):
-                link_tag = result.find(
-                    'a', {'class': 'fc-item__link'}, href=True)
-                if link_tag:
-                    title_text = link_tag.get_text(strip=True)
-                    href = link_tag['href']
-
-                    # Check if it's a news article and relevant
-                    if 'theguardian.com/' in href:  # Check if it's a full URL
-                        query_words = query.lower().split()
-                        if any(word in title_text.lower() for word in query_words):
-                            full_url = href  # It's already a full URL
-                            if full_url not in article_links:
-                                article_links.append(full_url)
-                                if len(article_links) >= max_results:
-                                    break
-
-            print(f"The Guardian result: {len(article_links)} articles found")
+            # Updated selector for Guardian search results
+            for result in soup.select('a[data-testid="result-title-a"]'):
+                title_text = result.get_text(strip=True)
+                href = result.get('href', '')
+                if href:
+                    query_words = query.lower().split()
+                    if any(word in title_text.lower() for word in query_words):
+                        if href not in article_links:
+                            article_links.append(href)
+                            if len(article_links) >= max_results:
+                                break
             return article_links
-
-        except requests.exceptions.Timeout:
-            print(f"Timeout error while searching The Guardian for: {query}")
-            return []
-        except requests.exceptions.ConnectionError:
-            print(
-                f"Connection error while searching The Guardian for: {query}")
-            return []
-        except requests.exceptions.HTTPError as e:
-            print(
-                f"HTTP error {e.response.status_code} while searching The Guardian for: {query}")
-            return []
         except Exception as e:
-            print(
-                f"Unexpected error in The Guardian search: {type(e).__name__}: {e}")
+            print(f"Error in The Guardian search: {e}")
             return []
 
     def send_error_response(self, code, message):
