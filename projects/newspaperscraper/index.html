@@ -139,14 +139,6 @@
                                     <input type="checkbox" id="source-mercury" checked class="mr-2">
                                     <span class="text-sm text-gray-300">Illawarra Mercury</span>
                                 </label>
-                                <label class="flex items-center">
-                                    <input type="checkbox" id="source-abc" checked class="mr-2">
-                                    <span class="text-sm text-gray-300">ABC News</span>
-                                </label>
-                                <label class="flex items-center">
-                                    <input type="checkbox" id="source-guardian" checked class="mr-2">
-                                    <span class="text-sm text-gray-300">The Guardian</span>
-                                </label>
                             </div>
                         </div>
 
@@ -346,8 +338,6 @@
             // Get selected sources
             const sources = [];
             if (document.getElementById('source-mercury').checked) sources.push('mercury');
-            if (document.getElementById('source-abc').checked) sources.push('abc');
-            if (document.getElementById('source-guardian').checked) sources.push('guardian');
 
             if (!query) {
                 showStatus('Please enter a search term', 'error');
