@@ -201,9 +201,8 @@ class handler(BaseHTTPRequestHandler):
         return 'No title found'
 
     def extract_content(self, soup):
-        """Extract article content using a comprehensive list of selectors and fallbacks."""
-        
-        # Primary, high-confidence selectors for modern news sites
+        """Extract full article content by aggregating all <p> tags from likely containers, or all <p> tags on the page if needed."""
+        # List of likely content containers
         content_selectors = [
             'div[data-testid="story-body"]',
             'div.story-body__inner',
@@ -213,35 +212,48 @@ class handler(BaseHTTPRequestHandler):
             'div.main-content',
             'div.story-content',
             'div.content',
+            'article',
         ]
 
-        content_elem = None
+        paragraphs = []
+        # Aggregate <p> tags from all likely containers
         for selector in content_selectors:
-            content_elem = soup.select_one(selector)
-            if content_elem:
-                break
-        
-        # Fallback for older or different structures
-        if not content_elem:
-            content_elem = soup.find('article')
+            for container in soup.select(selector):
+                # Remove known non-content elements
+                for ad_selector in ['.ad-slot', '.related-articles', '.subscription-prompt', 'aside', 'nav', 'footer']:
+                    for ad_element in container.select(ad_selector):
+                        ad_element.decompose()
+                ps = container.find_all('p', recursive=True)
+                paragraphs.extend([p.get_text(strip=True) for p in ps if p.get_text(strip=True)])
 
-        if content_elem:
-            # Remove known non-content elements
-            for ad_selector in ['.ad-slot', '.related-articles', '.subscription-prompt']:
-                for ad_element in content_elem.select(ad_selector):
-                    ad_element.decompose()
-            
-            paragraphs = content_elem.find_all('p', recursive=True)
-            
-            if paragraphs:
-                content = '\n\n'.join([p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)])
-                if len(content) > 100: # Basic check for meaningful content
-                    return content
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_paragraphs = []
+        for p in paragraphs:
+            if p not in seen:
+                unique_paragraphs.append(p)
+                seen.add(p)
 
-        # Last resort: if no specific container is found, grab all paragraphs
-        all_paragraphs = soup.find_all('p')
-        if all_paragraphs:
-            return '\n\n'.join([p.get_text(strip=True) for p in all_paragraphs if p.get_text(strip=True)])
+        content = '\n\n'.join(unique_paragraphs)
+        if len(content) > 200:  # More strict check for meaningful content
+            return content
+
+        # Fallback: aggregate all <p> tags on the page, excluding those in nav, footer, aside
+        all_paragraphs = []
+        for p in soup.find_all('p'):
+            # Exclude <p> tags inside nav, footer, aside
+            parent = p.parent
+            skip = False
+            while parent is not None:
+                if parent.name in ['nav', 'footer', 'aside']:
+                    skip = True
+                    break
+                parent = parent.parent
+            if not skip and p.get_text(strip=True):
+                all_paragraphs.append(p.get_text(strip=True))
+        content = '\n\n'.join(all_paragraphs)
+        if len(content) > 200:
+            return content
 
         # Ultimate fallback to meta description
         meta_desc = soup.find('meta', attrs={'name': 'description'})
