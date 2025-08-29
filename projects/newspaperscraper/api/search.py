@@ -41,36 +41,17 @@ class handler(BaseHTTPRequestHandler):
             except (ValueError, TypeError):
                 max_results = 10
 
-            sources = data.get('sources', ['mercury', 'abc', 'guardian'])
-            if not isinstance(sources, list):
-                sources = ['mercury', 'abc', 'guardian']
-
             if not query:
                 self.send_error_response(400, 'Please enter a search term')
                 return
 
-            article_urls = []
-            sources_searched = []
-
-            # Search Illawarra Mercury
-            if 'mercury' in sources:
-                article_urls += self.search_illawarra_mercury(
-                    query, max_results)
-                sources_searched.append('mercury')
-
-            # Search ABC News
-            if 'abc' in sources:
-                article_urls += self.search_abc_news(query, max_results)
-                sources_searched.append('abc')
-
-            # Search The Guardian Australia
-            if 'guardian' in sources:
-                article_urls += self.search_the_guardian(query, max_results)
-                sources_searched.append('guardian')
+            # As requested, only search Illawarra Mercury for now.
+            article_urls = self.search_illawarra_mercury(query, max_results)
+            sources_searched = ['mercury']
 
             if not article_urls:
                 self.send_error_response(
-                    404, f'No articles found for "{query}" across all sources.')
+                    404, f'No articles found for "{query}" on Illawarra Mercury.')
                 return
 
             self.send_response(200)
@@ -90,36 +71,48 @@ class handler(BaseHTTPRequestHandler):
             self.send_error_response(500, f'Internal server error: {str(e)}')
 
     def search_illawarra_mercury(self, query, max_results=7):
+        """
+        Searches the Illawarra Mercury using DuckDuckGo's HTML search to avoid direct scraping issues.
+        """
         try:
-            base_url = "https://www.illawarramercury.com.au"
-            search_url = f"{base_url}/search/?q={quote_plus(query)}"
+            search_query = f"site:illawarramercury.com.au {query}"
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Referer': 'https://duckduckgo.com/'
             }
-            response = requests.get(search_url, headers=headers, timeout=10)
+            
+            # Using DuckDuckGo's HTML endpoint
+            ddg_url = f"https://html.duckduckgo.com/html/?q={quote_plus(search_query)}"
+            
+            response = requests.get(ddg_url, headers=headers, timeout=15)
             response.raise_for_status()
-            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            soup = BeautifulSoup(response.content, 'lxml')
+            
             article_links = []
+            # Links are in divs with class 'result'
+            for result in soup.find_all('a', class_='result__a', href=True):
+                href = result['href']
+                
+                # DuckDuckGo uses a redirect, we need to clean the URL
+                if 'duckduckgo.com/y.js' in href:
+                    from urllib.parse import unquote
+                    href = unquote(href.split('uddg=')[1].split('&')[0])
 
-            # Updated selector for Illawarra Mercury search results
-            for result in soup.select('.result-tile'):
-                link_tag = result.find('a', href=True)
-                if link_tag:
-                    title_text = link_tag.get_text(strip=True)
-                    href = link_tag['href']
-                    if '/story/' in href:
-                        query_words = query.lower().split()
-                        if any(word in title_text.lower() for word in query_words):
-                            full_url = urljoin(base_url, href)
-                            if full_url not in article_links:
-                                article_links.append(full_url)
-                                if len(article_links) >= max_results:
-                                    break
+                # Ensure it's a story and not a category/tag page
+                if 'illawarramercury.com.au/story/' in href:
+                    if href not in article_links:
+                        article_links.append(href)
+                        if len(article_links) >= max_results:
+                            break
+            
             return article_links
         except Exception as e:
-            print(f"Error in Illawarra Mercury search: {e}")
+            print(f"Error in Illawarra Mercury (DuckDuckGo) search: {e}")
             return []
 
+    # The other search functions are no longer called, but we can leave them here
+    # in case they are needed in the future.
     def search_abc_news(self, query, max_results=7):
         try:
             base_url = "https://www.abc.net.au"
