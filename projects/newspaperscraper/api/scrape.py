@@ -118,7 +118,7 @@ class handler(BaseHTTPRequestHandler):
                 date_str = self.extract_date(soup)
                 content = self.extract_content(soup)
                 content = self.clean_article_content(content)
-                
+
                 return {
                     'url': url,
                     'title': title,
@@ -136,11 +136,13 @@ class handler(BaseHTTPRequestHandler):
         try:
             # Title
             title_elem = soup.find('h1', attrs={'data-testid': 'story-title'})
-            title = title_elem.get_text(strip=True) if title_elem else self.extract_title(soup)
+            title = title_elem.get_text(
+                strip=True) if title_elem else self.extract_title(soup)
 
             # Author
             author_elem = soup.find('a', attrs={'data-testid': 'author-link'})
-            author = author_elem.get_text(strip=True) if author_elem else 'No author found'
+            author = author_elem.get_text(
+                strip=True) if author_elem else 'No author found'
 
             # Date
             date_str = self.extract_date(soup)
@@ -149,9 +151,11 @@ class handler(BaseHTTPRequestHandler):
             content = ''
             story_body_div = soup.find('div', id='story-body')
             if story_body_div:
-                paragraphs = story_body_div.find_all('p', class_='Paragraph_wrapper__6w7GG')
-                content = "\n\n".join([p.get_text(strip=True) for p in paragraphs])
-            
+                paragraphs = story_body_div.find_all(
+                    'p', class_='Paragraph_wrapper__6w7GG')
+                content = "\n\n".join([p.get_text(strip=True)
+                                      for p in paragraphs])
+
             if not content:  # Fallback to generic extraction if specific one fails
                 content = self.extract_content(soup)
 
@@ -183,16 +187,17 @@ class handler(BaseHTTPRequestHandler):
 
     def extract_title(self, soup):
         """Extracts title using a series of selectors."""
-        title_selectors = ['h1[data-testid="story-title"]', 'h1', '.headline', '.story-headline', '.article-title']
+        title_selectors = ['h1[data-testid="story-title"]',
+                           'h1', '.headline', '.story-headline', '.article-title']
         for selector in title_selectors:
             title_elem = soup.select_one(selector)
             if title_elem:
                 return title_elem.get_text(strip=True)
-        
+
         # Fallback to <title> tag
         if soup.title and soup.title.string:
             return soup.title.string
-            
+
         return 'No title found'
 
     def extract_content(self, soup):
