@@ -2,7 +2,7 @@ from http.server import BaseHTTPRequestHandler
 import json
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import quote_plus, urljoin
+from urllib.parse import quote_plus, urljoin, unquote
 import time
 import re
 
@@ -96,7 +96,6 @@ class handler(BaseHTTPRequestHandler):
                 
                 # DuckDuckGo uses a redirect, we need to clean the URL
                 if 'duckduckgo.com/y.js' in href:
-                    from urllib.parse import unquote
                     href = unquote(href.split('uddg=')[1].split('&')[0])
 
                 # Ensure it's a story and not a category/tag page
