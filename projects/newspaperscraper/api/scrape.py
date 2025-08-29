@@ -4,7 +4,6 @@ import json
 import requests
 from bs4 import BeautifulSoup
 import time
-import re
 from datetime import datetime
 
 
@@ -61,80 +60,6 @@ class handler(BaseHTTPRequestHandler):
                 except Exception as e:
                     print(f"Error processing {url}: {type(e).__name__}: {e}")
                     results.append({'url': url, 'error': str(e)})
-                try:
-                    print(f"Scraping {i+1}/{len(urls)}: {url}")
-                    resp = requests.get(url, timeout=10)
-                    resp.raise_for_status()
-                    soup = BeautifulSoup(resp.content, 'html.parser')
-
-                    title = soup.find('h1')
-                    date = soup.find('time')
-
-                    # Try to get article content
-                    content_selectors = [
-                        'div.story-content',
-                        'div.article-content',
-                        'div.entry-content',
-                        'article',
-                        'div[class*="content"]'
-                    ]
-
-                    content = ''
-                    for selector in content_selectors:
-                        content_div = soup.select_one(selector)
-                        if content_div:
-                            # Extract text and clean it up
-                            paragraphs = content_div.find_all('p')
-                            content = ' '.join(
-                                [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)])
-                            break
-
-                    # Fallback to meta description if no content found
-                    if not content:
-                        preview = soup.find(
-                            'meta', attrs={'name': 'description'})
-                        if preview:
-                            content = preview.get('content', '')
-                        else:
-                            # Last resort: first few paragraphs
-                            paragraphs = soup.find_all('p')[:3]
-                            content = ' '.join(
-                                [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)])
-
-                    results.append({
-                        'url': url,
-                        'title': title.get_text(strip=True) if title else 'No title found',
-                        'date': date.get('datetime', '') if date else '',
-                        # Limit content length
-                        'content': content[:2000] + '...' if len(content) > 2000 else content
-                    })
-                    scraped_count += 1
-
-                except requests.exceptions.Timeout:
-                    print(f"Timeout scraping: {url}")
-                    results.append({
-                        'url': url,
-                        'error': 'Request timeout'
-                    })
-                except requests.exceptions.ConnectionError:
-                    print(f"Connection error scraping: {url}")
-                    results.append({
-                        'url': url,
-                        'error': 'Connection error'
-                    })
-                except requests.exceptions.HTTPError as e:
-                    print(
-                        f"HTTP error {e.response.status_code} scraping: {url}")
-                    results.append({
-                        'url': url,
-                        'error': f'HTTP {e.response.status_code} error'
-                    })
-                except Exception as e:
-                    print(f"Error scraping {url}: {type(e).__name__}: {e}")
-                    results.append({
-                        'url': url,
-                        'error': str(e)
-                    })
 
             self.send_response(200)
             self.send_header('Content-type', 'application/json')

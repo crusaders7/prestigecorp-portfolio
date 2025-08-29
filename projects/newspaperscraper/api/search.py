@@ -104,49 +104,22 @@ class handler(BaseHTTPRequestHandler):
             soup = BeautifulSoup(response.content, 'html.parser')
             article_links = []
 
-            # Try multiple selectors to find article links
-            links = soup.select('a[href*="/story/"]')
-            if not links:
-                links = soup.select('h3 a')
-            if not links:
-                links = soup.select('.search-result__title a')
+            # More specific selector for search result items
+            for result in soup.select('.css-1s72p3j'):
+                link_tag = result.find('a', href=True)
+                if link_tag:
+                    title_text = link_tag.get_text(strip=True)
+                    href = link_tag['href']
 
-            print(f"Found {len(links)} potential article links")
-
-            for link in links:
-                title_text = link.get_text(strip=True)
-                href = link.get('href', '')
-                if href and '/story/' in href:
-                    # More flexible matching - check if any query word is in the title
-                    query_words = query.lower().split()
-                    if any(word in title_text.lower() for word in query_words):
-                        full_url = urljoin(base_url, href)
-                        if full_url not in article_links:
-                            article_links.append(full_url)
-                            print(f"Added article: {title_text[:50]}...")
-                            if len(article_links) >= max_results:
-                                break
-
-            # If still no results, try a more lenient approach
-            if not article_links:
-                print("Trying lenient approach to find article links")
-                all_links = soup.find_all('a', href=True)
-                query_words = query.lower().split()
-
-                for link in all_links:
-                    title_text = link.get_text(strip=True)
-                    href = link.get('href', '')
-
-                    # Check if it's likely an article link
-                    if href and ('/story/' in href or '/article/' in href or
-                                 any(word in title_text.lower() for word in query_words)):
-                        full_url = urljoin(base_url, href)
-                        if full_url not in article_links:
-                            article_links.append(full_url)
-                            print(
-                                f"Added article (lenient): {title_text[:50]}...")
-                            if len(article_links) >= max_results:
-                                break
+                    # Check if it's a valid story link and relevant
+                    if '/story/' in href:
+                        query_words = query.lower().split()
+                        if any(word in title_text.lower() for word in query_words):
+                            full_url = urljoin(base_url, href)
+                            if full_url not in article_links:
+                                article_links.append(full_url)
+                                if len(article_links) >= max_results:
+                                    break
 
             print(
                 f"Illawarra Mercury result: {len(article_links)} articles found")
@@ -170,8 +143,8 @@ class handler(BaseHTTPRequestHandler):
     def search_abc_news(self, query, max_results=7):
         try:
             base_url = "https://www.abc.net.au"
-            # Use HTML search instead of JSON API
-            search_url = f"https://www.abc.net.au/news/sitemap/?queries={quote_plus(query)}"
+            # Use the main search page for better results
+            search_url = f"https://www.abc.net.au/news/search?query={quote_plus(query)}"
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Educational Research Tool)',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
@@ -184,41 +157,23 @@ class handler(BaseHTTPRequestHandler):
             soup = BeautifulSoup(response.content, 'html.parser')
             article_links = []
 
-            # Try multiple selectors for ABC News
-            selectors = [
-                'a[href*="/news/"]',
-                '.story-headline a',
-                '.content-item__link',
-                'h3 a',
-                '.teaser-link'
-            ]
+            # Selector for ABC News search results
+            for result in soup.select('div._1E3hT'):
+                link_tag = result.find('a', href=True)
+                if link_tag:
+                    title_text = link_tag.get_text(strip=True)
+                    href = link_tag['href']
 
-            links = []
-            for selector in selectors:
-                links = soup.select(selector)
-                if links:
-                    print(
-                        f"Found {len(links)} links using selector: {selector}")
-                    break
-
-            query_words = [word.lower() for word in query.split()]
-
-            for link in links:
-                title_text = link.get_text(strip=True)
-                href = link.get('href', '')
-
-                if href and '/news/' in href:
-                    # Check if query words match title
-                    if any(word in title_text.lower() for word in query_words):
-                        full_url = urljoin(base_url, href)
-                        if full_url not in article_links:
-                            article_links.append(full_url)
-                            print(f"Added ABC article: {title_text[:50]}...")
-                            if len(article_links) >= max_results:
-                                break
+                    if '/news/' in href:
+                        query_words = query.lower().split()
+                        if any(word in title_text.lower() for word in query_words):
+                            full_url = urljoin(base_url, href)
+                            if full_url not in article_links:
+                                article_links.append(full_url)
+                                if len(article_links) >= max_results:
+                                    break
 
             print(f"ABC News result: {len(article_links)} articles found")
-            time.sleep(1)  # Rate limiting
             return article_links
 
         except requests.exceptions.Timeout:
@@ -239,8 +194,8 @@ class handler(BaseHTTPRequestHandler):
     def search_the_guardian(self, query, max_results=7):
         try:
             base_url = "https://www.theguardian.com"
-            # Use direct website search instead of API
-            search_url = f"https://www.theguardian.com/australia-news/search?q={quote_plus(query)}"
+            # Use general search
+            search_url = f"https://www.theguardian.com/search?q={quote_plus(query)}"
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Educational Research Tool)',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
@@ -253,42 +208,25 @@ class handler(BaseHTTPRequestHandler):
             soup = BeautifulSoup(response.content, 'html.parser')
             article_links = []
 
-            # Try multiple selectors for Guardian
-            selectors = [
-                'a[data-link-name="article"]',
-                '.fc-item__link',
-                '.u-faux-block-link__overlay',
-                'h3 a',
-                '.headline-link'
-            ]
+            # Selector for Guardian search results
+            for result in soup.select('div.fc-item__container'):
+                link_tag = result.find(
+                    'a', {'class': 'fc-item__link'}, href=True)
+                if link_tag:
+                    title_text = link_tag.get_text(strip=True)
+                    href = link_tag['href']
 
-            links = []
-            for selector in selectors:
-                links = soup.select(selector)
-                if links:
-                    print(
-                        f"Found {len(links)} links using selector: {selector}")
-                    break
-
-            query_words = [word.lower() for word in query.split()]
-
-            for link in links:
-                title_text = link.get_text(strip=True)
-                href = link.get('href', '')
-
-                if href and ('/australia-news/' in href or '/world/' in href):
-                    # Check if query words match title
-                    if any(word in title_text.lower() for word in query_words):
-                        full_url = urljoin(base_url, href)
-                        if full_url not in article_links:
-                            article_links.append(full_url)
-                            print(
-                                f"Added Guardian article: {title_text[:50]}...")
-                            if len(article_links) >= max_results:
-                                break
+                    # Check if it's a news article and relevant
+                    if 'theguardian.com/' in href:  # Check if it's a full URL
+                        query_words = query.lower().split()
+                        if any(word in title_text.lower() for word in query_words):
+                            full_url = href  # It's already a full URL
+                            if full_url not in article_links:
+                                article_links.append(full_url)
+                                if len(article_links) >= max_results:
+                                    break
 
             print(f"The Guardian result: {len(article_links)} articles found")
-            time.sleep(1)  # Rate limiting
             return article_links
 
         except requests.exceptions.Timeout:
