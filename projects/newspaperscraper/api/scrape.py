@@ -97,47 +97,103 @@ class handler(BaseHTTPRequestHandler):
                     f"Critical error - unable to send any response: {message}")
 
     def extract_article_data(self, url, search_term=""):
-        """Extract article data using multiple selectors and advanced content cleaning"""
+        """Extract article data using provider-specific or generic methods."""
         try:
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Educational Research Tool)',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Connection': 'keep-alive',
             }
 
-            resp = requests.get(url, headers=headers, timeout=10)
+            resp = requests.get(url, headers=headers, timeout=15)
             resp.raise_for_status()
-            soup = BeautifulSoup(resp.content, 'html.parser')
+            soup = BeautifulSoup(resp.content, 'lxml')
 
-            # Extract title
-            title_selectors = ['h1', '.headline',
-                               '.story-headline', '.article-title']
-            title = ''
-            for selector in title_selectors:
-                title_elem = soup.select_one(selector)
-                if title_elem:
-                    title = title_elem.get_text(strip=True)
-                    break
+            if "illawarramercury.com.au" in url:
+                return self.extract_illawarra_mercury_data(soup, url)
+            else:
+                # Generic extraction for other sites
+                title = self.extract_title(soup)
+                date_str = self.extract_date(soup)
+                content = self.extract_content(soup)
+                content = self.clean_article_content(content)
+                
+                return {
+                    'url': url,
+                    'title': title,
+                    'date': date_str,
+                    'content': content,
+                    'scraped_at': datetime.now().isoformat()
+                }
 
-            # Extract date
+        except Exception as e:
+            print(f"Error extracting data from {url}: {e}")
+            return {'url': url, 'error': str(e)}
+
+    def extract_illawarra_mercury_data(self, soup, url):
+        """Extracts article data specifically for Illawarra Mercury"""
+        try:
+            # Title
+            title_elem = soup.find('h1', attrs={'data-testid': 'story-title'})
+            title = title_elem.get_text(strip=True) if title_elem else self.extract_title(soup)
+
+            # Author
+            author_elem = soup.find('a', attrs={'data-testid': 'author-link'})
+            author = author_elem.get_text(strip=True) if author_elem else 'No author found'
+
+            # Date
             date_str = self.extract_date(soup)
 
-            # Extract content using multiple strategies
-            content = self.extract_content(soup)
+            # Content
+            content = ''
+            story_body_div = soup.find('div', id='story-body')
+            if story_body_div:
+                paragraphs = story_body_div.find_all('p', class_='Paragraph_wrapper__6w7GG')
+                content = "\n\n".join([p.get_text(strip=True) for p in paragraphs])
+            
+            if not content:  # Fallback to generic extraction if specific one fails
+                content = self.extract_content(soup)
 
             # Clean content
             content = self.clean_article_content(content)
 
             return {
                 'url': url,
-                'title': title or 'No title found',
+                'title': title,
+                'author': author,
                 'date': date_str,
-                'content': content[:2000] + '...' if len(content) > 2000 else content,
+                'content': content,
                 'scraped_at': datetime.now().isoformat()
             }
-
         except Exception as e:
-            print(f"Error extracting data from {url}: {e}")
-            return {'url': url, 'error': str(e)}
+            print(f"Error in extract_illawarra_mercury_data for {url}: {e}")
+            # Fallback to generic extraction on specific error
+            title = self.extract_title(soup)
+            date_str = self.extract_date(soup)
+            content = self.extract_content(soup)
+            return {
+                'url': url,
+                'title': title,
+                'date': date_str,
+                'content': self.clean_article_content(content),
+                'scraped_at': datetime.now().isoformat(),
+                'extraction_error': str(e)
+            }
+
+    def extract_title(self, soup):
+        """Extracts title using a series of selectors."""
+        title_selectors = ['h1[data-testid="story-title"]', 'h1', '.headline', '.story-headline', '.article-title']
+        for selector in title_selectors:
+            title_elem = soup.select_one(selector)
+            if title_elem:
+                return title_elem.get_text(strip=True)
+        
+        # Fallback to <title> tag
+        if soup.title and soup.title.string:
+            return soup.title.string
+            
+        return 'No title found'
 
     def extract_content(self, soup):
         """Extract article content using multiple selectors"""
