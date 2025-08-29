@@ -530,14 +530,17 @@
             const articlesList = document.getElementById('articlesList');
 
             articlesList.innerHTML = scrapedArticles.map((article, index) => `
-                <div class="article-card" onclick="toggleArticle(${index})">
-                    <h4 class="font-semibold text-white mb-2">${article.title}</h4>
-                    <p class="text-gray-400 text-sm mb-2">
+                <div class="article-card">
+                    <div class="flex justify-between items-start">
+                        <h4 class="font-semibold text-white mb-2 flex-1">${article.title}</h4>
+                        <a href="${article.url}" target="_blank" class="ml-4 text-indigo-400 text-sm hover:underline whitespace-nowrap">View Original →</a>
+                    </div>
+                    <p class="text-gray-400 text-sm mb-2 cursor-pointer" onclick="toggleArticle(${index})">
                         ${article.date ? `Date: ${article.date} | ` : ''}
-                        Click to read full article
+                        Click to expand/collapse article preview
                     </p>
-                    <div id="article-content-${index}" class="hidden mt-4 text-gray-300 text-sm">
-                        ${article.content.substring(0, 500)}...
+                    <div id="article-content-${index}" class="hidden mt-4 text-gray-300 text-sm prose prose-invert max-w-none">
+                        ${article.content}
                     </div>
                 </div>
             `).join('');

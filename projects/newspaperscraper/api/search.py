@@ -70,9 +70,10 @@ class handler(BaseHTTPRequestHandler):
             print(f"Unexpected error in do_POST: {e}")
             self.send_error_response(500, f'Internal server error: {str(e)}')
 
-    def search_illawarra_mercury(self, query, max_results=7):
+    def search_illawarra_mercury(self, query, max_results=10):
         """
         Searches the Illawarra Mercury using DuckDuckGo's HTML search to avoid direct scraping issues.
+        Fetches multiple pages if necessary to meet max_results.
         """
         try:
             search_query = f"site:illawarramercury.com.au {query}"
@@ -80,30 +81,64 @@ class handler(BaseHTTPRequestHandler):
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                 'Referer': 'https://duckduckgo.com/'
             }
-            
+
             # Using DuckDuckGo's HTML endpoint
             ddg_url = f"https://html.duckduckgo.com/html/?q={quote_plus(search_query)}"
-            
+
             response = requests.get(ddg_url, headers=headers, timeout=15)
             response.raise_for_status()
-            
-            soup = BeautifulSoup(response.content, 'lxml')
-            
-            article_links = []
-            # Links are in divs with class 'result'
-            for result in soup.find_all('a', class_='result__a', href=True):
-                href = result['href']
-                
-                # DuckDuckGo uses a redirect, we need to clean the URL
-                if 'duckduckgo.com/y.js' in href:
-                    href = unquote(href.split('uddg=')[1].split('&')[0])
 
-                # Ensure it's a story and not a category/tag page
-                if 'illawarramercury.com.au/story/' in href:
-                    if href not in article_links:
-                        article_links.append(href)
-                        if len(article_links) >= max_results:
-                            break
+            soup = BeautifulSoup(response.content, 'lxml')
+            article_links = []
+
+            # Loop for pagination (max 3 pages to avoid excessive requests)
+            for _ in range(3):
+                # Find all result links on the current page
+                for result in soup.find_all('a', class_='result__a', href=True):
+                    href = result['href']
+
+                    # DuckDuckGo uses a redirect, we need to clean the URL
+                    if 'duckduckgo.com/y.js' in href:
+                        try:
+                            href = unquote(href.split('uddg=')[1].split('&')[0])
+                        except IndexError:
+                            continue  # Skip malformed redirect links
+
+                    # Ensure it's a story and not a category/tag page
+                    if 'illawarramercury.com.au/story/' in href:
+                        if href not in article_links:
+                            article_links.append(href)
+                            if len(article_links) >= max_results:
+                                break  # Inner loop break
+
+                if len(article_links) >= max_results:
+                    break  # Outer loop break
+
+                # Find the "More results" form for the next page
+                next_form = soup.find('form', class_='results_form')
+                if not next_form:
+                    break  # No more pages
+
+                # Prepare data for the next POST request
+                form_data = {}
+                for input_tag in next_form.find_all('input', type='hidden'):
+                    name = input_tag.get('name')
+                    value = input_tag.get('value')
+                    if name:
+                        form_data[name] = value
+                
+                if not form_data:
+                    break
+
+                # Make the POST request for the next page of results
+                try:
+                    time.sleep(0.5) # Be polite
+                    response = requests.post("https://html.duckduckgo.com/html/", headers=headers, data=form_data, timeout=15)
+                    response.raise_for_status()
+                    soup = BeautifulSoup(response.content, 'lxml')
+                except Exception as e:
+                    print(f"Error fetching next page from DuckDuckGo: {e}")
+                    break # Stop pagination on error
             
             return article_links
         except Exception as e:
