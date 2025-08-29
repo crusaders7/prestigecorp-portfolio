@@ -201,37 +201,54 @@ class handler(BaseHTTPRequestHandler):
         return 'No title found'
 
     def extract_content(self, soup):
-        """Extract article content using multiple selectors"""
+        """Extract article content using a comprehensive list of selectors and fallbacks."""
+        
+        # Primary, high-confidence selectors for modern news sites
         content_selectors = [
-            'div.story-content',      # Common news site structure
-            'div.article-content',    # Alternative structure
-            'article',                # Semantic HTML5
-            'div[itemprop="articleBody"]',  # Schema.org markup
-            'div.entry-content',
-            'div.post-content',
-            'div.content',
+            'div[data-testid="story-body"]',
+            'div.story-body__inner',
             'div.article-body',
-            'div.story-body'
+            'div[itemprop="articleBody"]',
+            'article.article-body',
+            'div.main-content',
+            'div.story-content',
+            'div.content',
         ]
 
+        content_elem = None
         for selector in content_selectors:
             content_elem = soup.select_one(selector)
             if content_elem:
-                paragraphs = content_elem.find_all('p')
-                if paragraphs:
-                    content = '\n\n'.join(
-                        [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)])
-                    if content:
-                        return content
+                break
+        
+        # Fallback for older or different structures
+        if not content_elem:
+            content_elem = soup.find('article')
 
-        # Fallback to meta description
+        if content_elem:
+            # Remove known non-content elements
+            for ad_selector in ['.ad-slot', '.related-articles', '.subscription-prompt']:
+                for ad_element in content_elem.select(ad_selector):
+                    ad_element.decompose()
+            
+            paragraphs = content_elem.find_all('p', recursive=True)
+            
+            if paragraphs:
+                content = '\n\n'.join([p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)])
+                if len(content) > 100: # Basic check for meaningful content
+                    return content
+
+        # Last resort: if no specific container is found, grab all paragraphs
+        all_paragraphs = soup.find_all('p')
+        if all_paragraphs:
+            return '\n\n'.join([p.get_text(strip=True) for p in all_paragraphs if p.get_text(strip=True)])
+
+        # Ultimate fallback to meta description
         meta_desc = soup.find('meta', attrs={'name': 'description'})
         if meta_desc:
-            return meta_desc.get('content', '')
+            return meta_desc.get('content', 'Could not extract article content.')
 
-        # Last resort - get first few paragraphs
-        paragraphs = soup.find_all('p')[:5]
-        return '\n\n'.join([p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)])
+        return 'Could not extract article content.'
 
     def extract_date(self, soup):
         """Extract publication date using multiple methods"""
