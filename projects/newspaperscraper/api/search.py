@@ -111,56 +111,6 @@ class handler(BaseHTTPRequestHandler):
             self.send_error_response(500, f'Internal server error: {str(e)}')
 
     def search_illawarra_mercury(self, query, max_results):
-        """
-        Searches Illawarra Mercury for articles.
-        First, it tries the native site search (which uses Google Custom Search).
-        If that fails, it falls back to using DuckDuckGo.
-        """
-        try:
-            print("Attempting native search for Illawarra Mercury...")
-            urls = self._search_mercury_native(query, max_results)
-            if not urls:
-                print("Native search returned no results, trying fallback.")
-                # This is not an exception, just empty results, so we fall back.
-                return self._search_mercury_duckduckgo(query, max_results)
-            print(f"Native search found {len(urls)} results.")
-            return urls
-        except Exception as e:
-            print(
-                f"Native search failed: {e}. Falling back to DuckDuckGo search.")
-            return self._search_mercury_duckduckgo(query, max_results)
-
-    def _search_mercury_native(self, query, max_results):
-        search_url = f"https://www.illawarramercury.com.au/search/?q={requests.utils.quote(query)}"
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-
-        print(f"Requesting native search URL: {search_url}")
-        response = requests.get(search_url, headers=headers, timeout=15)
-        response.raise_for_status()
-
-        soup = BeautifulSoup(response.text, 'lxml')
-
-        results = []
-        # Selectors for Google Custom Search Engine results
-        for result_elem in soup.select('div.gsc-webResult.gsc-result'):
-            if len(results) >= max_results:
-                break
-
-            title_elem = result_elem.select_one('a.gs-title')
-            if title_elem and title_elem.has_attr('href'):
-                url = title_elem['href']
-                # Ensure it's a valid and on-site URL
-                if url.startswith('http') and 'illawarramercury.com.au/story/' in url:
-                    # Clean up tracking parameters
-                    url = url.split('?')[0]
-                    if url not in results:
-                        results.append(url)
-
-        return results
-
-    def _search_mercury_duckduckgo(self, query, max_results):
         """Searches the Illawarra Mercury website for a given query using DuckDuckGo."""
         urls = []
         seen_urls = set()
