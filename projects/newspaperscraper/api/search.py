@@ -126,7 +126,9 @@ class handler(BaseHTTPRequestHandler):
                 "https://www.illawarramercury.com.au",
                 "https://www.illawarramercury.com.au/news/",
                 "https://www.illawarramercury.com.au/sport/",
-                "https://www.illawarramercury.com.au/news/business/"
+                "https://www.illawarramercury.com.au/news/business/",
+                "https://www.illawarramercury.com.au/news/local-news/",
+                "https://www.illawarramercury.com.au/news/politics/"
             ]
             
             headers = {
@@ -146,9 +148,10 @@ class handler(BaseHTTPRequestHandler):
                         href = link['href']
                         if '/story/' in href:
                             full_url = urljoin("https://www.illawarramercury.com.au", href)
-                            # Remove comment links and duplicates
-                            if '#comments' not in full_url and full_url not in all_story_urls:
-                                all_story_urls.append(full_url)
+                            # Remove comments/fragments and query params for clean deduplication
+                            clean_url = full_url.split('#')[0].split('?')[0]
+                            if clean_url not in all_story_urls:
+                                all_story_urls.append(clean_url)
                 
                 except Exception as e:
                     print(f"Failed to scrape category {category_url}: {e}")
@@ -156,8 +159,21 @@ class handler(BaseHTTPRequestHandler):
             
             print(f"Found {len(all_story_urls)} total articles from categories")
             
-            # Strategy 1a: URL keyword matching with scoring (primary relevance filter)
+            # Strategy 1a: URL keyword matching with scoring (enhanced for compound terms)
+            query_lower = query.lower()
             query_words = [word.lower() for word in query.split() if len(word) > 2]  # Skip short words
+            
+            # Create variations for better matching
+            query_variations = [
+                query_lower,
+                query_lower.replace(' ', '-'),
+                query_lower.replace(' ', '_'),
+                query_lower.replace('council', 'city-council'),
+                query_lower.replace('council', 'city_council'),
+                'shellharbour-city-council' if 'shellharbour' in query_lower else None,
+                'shell-harbour' if 'shellharbour' in query_lower else None
+            ]
+            query_variations = [v for v in query_variations if v]  # Remove None values
             
             # Score URLs based on relevance
             url_scores = []
@@ -165,13 +181,37 @@ class handler(BaseHTTPRequestHandler):
                 url_text = story_url.lower()
                 score = 0
                 
-                # Higher score for exact matches in URL
+                # Check for exact phrase matches with variations (highest priority)
+                for variation in query_variations:
+                    if variation in url_text:
+                        score += 30  # Higher bonus for phrase variations
+                        break
+                
+                # Check individual words
+                words_found = 0
                 for word in query_words:
                     if word in url_text:
                         score += 10
+                        words_found += 1
                         # Bonus for word appearing in the story slug (after /story/)
                         if '/story/' in url_text and word in url_text.split('/story/')[-1]:
                             score += 5
+                
+                # Check for partial word matches (shellharbour vs shell-harbour)
+                if 'shellharbour' in query_lower:
+                    if 'shell-harbour' in url_text or 'shellharbour' in url_text:
+                        score += 8
+                
+                # Bonus for finding multiple query words (compound terms)
+                if len(query_words) > 1 and words_found > 1:
+                    score += words_found * 3  # Extra points for multiple matches
+                
+                # Special handling for location + organization combinations
+                if len(query_words) >= 2:
+                    # Check for partial matches in story slug
+                    story_part = url_text.split('/story/')[-1] if '/story/' in url_text else url_text
+                    if any(word in story_part for word in query_words):
+                        score += 8
                 
                 if score > 0:
                     url_scores.append((score, story_url))
@@ -181,6 +221,8 @@ class handler(BaseHTTPRequestHandler):
             relevant_urls = [url for score, url in url_scores[:max_results]]
             
             print(f"Found {len(relevant_urls)} relevant URL matches")
+            if url_scores:
+                print(f"Top scores: {[score for score, url in url_scores[:3]]}")
             
             if relevant_urls:
                 urls.extend(relevant_urls)
@@ -188,51 +230,175 @@ class handler(BaseHTTPRequestHandler):
                 print(f"Strategy 1 found {len(urls)} relevant articles")
                 return urls
             
-            # Strategy 1b: If no URL matches, do limited title analysis only
-            print("No URL matches found, checking article titles...")
+            # Strategy 1b: Enhanced title and content analysis for compound terms
+            print("No URL matches found, doing enhanced content analysis...")
             
             title_matches = []
-            # Only check first 30 articles to keep it fast
-            for story_url in all_story_urls[:30]:
+            # Check more articles for compound terms (increased for better coverage)
+            articles_to_check = min(80, len(all_story_urls))
+            
+            for story_url in all_story_urls[:articles_to_check]:
                 try:
-                    resp = requests.get(story_url, headers=headers, timeout=6)
+                    resp = requests.get(story_url, headers=headers, timeout=10)  # Increased timeout from 6 to 10
                     if resp.status_code == 200:
                         soup = BeautifulSoup(resp.content, 'lxml')
                         
-                        # Get just the title
+                        # Get title and meta description
                         title_text = ""
                         title_elem = soup.find('h1')
                         if title_elem:
                             title_text = title_elem.get_text().lower()
                         
-                        # Check if query words appear in title
-                        title_score = 0
-                        for word in query_words:
-                            if word in title_text:
-                                title_score += 1
+                        meta_desc = ""
+                        meta_elem = soup.find('meta', {'name': 'description'})
+                        if meta_elem:
+                            meta_desc = meta_elem.get('content', '').lower()
                         
-                        if title_score > 0:
-                            title_matches.append((title_score, story_url))
+                        # Also check first paragraph for additional context
+                        first_para = ""
+                        para_elem = soup.find('p')
+                        if para_elem:
+                            first_para = para_elem.get_text()[:200].lower()  # First 200 chars
+                        
+                        combined_text = f"{title_text} {meta_desc} {first_para}"
+                        
+                        # Scoring for content matches
+                        content_score = 0
+                        
+                        # Check for exact phrase match
+                        if query.lower() in combined_text:
+                            content_score += 20
+                        
+                        # Check for phrase variations (compound terms handling)
+                        phrase_variations = [
+                            query.lower().replace(' ', '-'),
+                            query.lower().replace(' ', '_'),
+                            query.lower()
+                        ]
+                        
+                        # Special Shellharbour variations
+                        if 'shellharbour' in query.lower():
+                            phrase_variations.extend([
+                                'shellharbour city council',
+                                'shellharbour-city-council', 
+                                'shell harbour council',
+                                'shell-harbour-council'
+                            ])
+                        
+                        for variation in phrase_variations:
+                            if variation in combined_text:
+                                content_score += 18  # Increased from 15
+                                break
+                        
+                        # Check individual words
+                        words_found = 0
+                        for word in query_words:
+                            if word in combined_text:
+                                content_score += 5
+                                words_found += 1
+                                # Extra points if word is in title
+                                if word in title_text:
+                                    content_score += 3
+                        
+                        # Special handling for Shellharbour + Council combinations
+                        if 'shellharbour' in query.lower():
+                            shellharbour_variants = ['shellharbour', 'shell harbour', 'shell-harbour']
+                            council_variants = ['council', 'city council', 'city-council']
+                            
+                            has_location = any(variant in combined_text for variant in shellharbour_variants)
+                            has_council = any(variant in combined_text for variant in council_variants)
+                            
+                            if has_location and has_council:
+                                content_score += 15  # Bonus for both location and council
+                            elif has_location:
+                                content_score += 8   # Some points for just location
+                        
+                        # Bonus for multiple words found
+                        if len(query_words) > 1 and words_found > 1:
+                            content_score += words_found * 3  # Increased multiplier
+                        
+                        # Bonus if words appear in title (more relevant than description)
+                        title_words = sum(1 for word in query_words if word in title_text)
+                        if title_words > 0:
+                            content_score += title_words * 3
+                        
+                        if content_score > 0:
+                            title_matches.append((content_score, story_url))
                             if len(title_matches) >= max_results:
                                 break
                 
                 except Exception:
                     continue
                 
-                # Very small delay to be respectful
-                time.sleep(0.2)
+                # Small delay to be respectful
+                time.sleep(0.3)
             
             # Sort title matches by relevance
             title_matches.sort(reverse=True, key=lambda x: x[0])
             title_urls = [url for score, url in title_matches]
             
-            print(f"Found {len(title_urls)} title matches")
+            print(f"Found {len(title_urls)} content matches")
+            if title_matches:
+                print(f"Top content scores: {[score for score, url in title_matches[:3]]}")
             
             if title_urls:
                 urls.extend(title_urls)
                 seen_urls.update(title_urls)
-                print(f"Strategy 1 found {len(urls)} articles via title analysis")
+                print(f"Strategy 1 found {len(urls)} articles via content analysis")
                 return urls
+            
+            # Strategy 1c: If still no results for compound terms, try broader single-word search
+            if len(query_words) > 1 and len(urls) < 3:
+                print(f"Limited results for compound term, trying broader search...")
+                broader_matches = []
+                
+                # Try searching with the first word only (often the location)
+                primary_word = query_words[0]  # e.g., "shellharbour"
+                
+                for story_url in all_story_urls[:60]:  # Check more articles
+                    try:
+                        resp = requests.get(story_url, headers=headers, timeout=5)
+                        if resp.status_code == 200:
+                            soup = BeautifulSoup(resp.content, 'lxml')
+                            
+                            title_text = ""
+                            title_elem = soup.find('h1')
+                            if title_elem:
+                                title_text = title_elem.get_text().lower()
+                            
+                            # Look for primary word in title or URL
+                            url_lower = story_url.lower()
+                            broad_score = 0
+                            
+                            if primary_word in title_text:
+                                broad_score += 15
+                            if primary_word in url_lower:
+                                broad_score += 10
+                            
+                            # Check if any of the other query words appear nearby
+                            for other_word in query_words[1:]:
+                                if other_word in title_text or other_word in url_lower:
+                                    broad_score += 5
+                            
+                            if broad_score > 0:
+                                broader_matches.append((broad_score, story_url))
+                                if len(broader_matches) >= 10:  # Get some additional results
+                                    break
+                    
+                    except Exception:
+                        continue
+                    
+                    time.sleep(0.2)
+                
+                # Add the best broader matches
+                broader_matches.sort(reverse=True, key=lambda x: x[0])
+                broader_urls = [url for score, url in broader_matches[:5]]  # Take top 5
+                
+                if broader_urls:
+                    urls.extend(broader_urls)
+                    seen_urls.update(broader_urls)
+                    print(f"Added {len(broader_urls)} broader matches")
+                    return urls
         
         except Exception as e:
             print(f"Homepage scraping failed: {e}")
