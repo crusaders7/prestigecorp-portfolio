@@ -115,6 +115,7 @@ class handler(BaseHTTPRequestHandler):
         Searches the Illawarra Mercury website using a multi-strategy approach.
         It first attempts a direct search and falls back to DuckDuckGo if needed.
         """
+        print(f"Searching Illawarra Mercury for '{query}'...")
         try:
             # Strategy 1: Direct Search
             direct_search_url = f"https://www.illawarramercury.com.au/search/?q={quote_plus(query)}"
@@ -130,8 +131,8 @@ class handler(BaseHTTPRequestHandler):
             urls = []
             seen_urls = set()
 
-            # This selector is based on the provided HTML and may need updates if the site changes.
-            for link in soup.select('.story-block__headline a'):
+            # Updated, more flexible selector based on potential site structures
+            for link in soup.select('.story-block__headline a, div.story-block a[href]'):
                 if len(urls) >= max_results:
                     break
                 href = link.get('href')
