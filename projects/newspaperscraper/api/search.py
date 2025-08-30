@@ -112,46 +112,22 @@ class handler(BaseHTTPRequestHandler):
 
     def search_illawarra_mercury(self, query, max_results):
         """
-        Searches the Illawarra Mercury website.
-        First, it tries a direct search. If that fails or yields no results,
-        it falls back to using DuckDuckGo's HTML search for better reliability.
+        Searches the Illawarra Mercury website using DuckDuckGo's HTML search
+        for reliability and consistency.
         """
         try:
-            # --- Method 1: Direct Search ---
-            direct_search_url = f"https://www.illawarramercury.com.au/search/?q={quote_plus(query)}"
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
-            resp = requests.get(direct_search_url, headers=headers, timeout=10)
-            resp.raise_for_status()
-            soup = BeautifulSoup(resp.content, 'lxml')
-            
-            urls = []
-            seen_urls = set()
-
-            # Corrected selector for direct search results
-            for link in soup.select('.story-block__headline a'):
-                if len(urls) >= max_results:
-                    break
-                href = link.get('href')
-                if href:
-                    full_url = urljoin("https://www.illawarramercury.com.au", href)
-                    if full_url not in seen_urls and 'illawarramercury.com.au/story/' in full_url:
-                        seen_urls.add(full_url)
-                        urls.append(full_url)
-            
-            if urls:
-                print(f"Direct search found {len(urls)} results for Illawarra Mercury.")
-                return urls
-
-            # --- Method 2: Fallback to DuckDuckGo ---
-            print("Direct search failed, falling back to DuckDuckGo for Illawarra Mercury.")
             ddg_search_url = "https://html.duckduckgo.com/html/"
             params = {'q': f'site:illawarramercury.com.au {query}'}
             
             resp = requests.get(ddg_search_url, headers=headers, params=params, timeout=10)
             resp.raise_for_status()
             soup = BeautifulSoup(resp.text, 'lxml')
+
+            urls = []
+            seen_urls = set()
 
             for link in soup.find_all('a', class_='result__a'):
                 if len(urls) >= max_results:
