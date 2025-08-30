@@ -126,12 +126,7 @@ class handler(BaseHTTPRequestHandler):
                 "https://www.illawarramercury.com.au",
                 "https://www.illawarramercury.com.au/news/",
                 "https://www.illawarramercury.com.au/sport/",
-                "https://www.illawarramercury.com.au/news/local/",
-                "https://www.illawarramercury.com.au/news/business/",
-                "https://www.illawarramercury.com.au/news/national/",
-                "https://www.illawarramercury.com.au/lifestyle/",
-                "https://www.illawarramercury.com.au/entertainment/",
-                "https://www.illawarramercury.com.au/opinion/"
+                "https://www.illawarramercury.com.au/news/business/"
             ]
             
             headers = {
@@ -161,86 +156,89 @@ class handler(BaseHTTPRequestHandler):
             
             print(f"Found {len(all_story_urls)} total articles from categories")
             
-            # Strategy 1a: First try exact keyword matching in URLs
+            # Strategy 1a: URL keyword matching with scoring (primary relevance filter)
             query_words = [word.lower() for word in query.split() if len(word) > 2]  # Skip short words
-            exact_matches = []
             
+            # Score URLs based on relevance
+            url_scores = []
             for story_url in all_story_urls:
                 url_text = story_url.lower()
-                # Check if URL contains any of the query words
-                if any(word in url_text for word in query_words):
-                    exact_matches.append(story_url)
-            
-            print(f"Found {len(exact_matches)} exact URL matches")
-            
-            # Strategy 1b: If we have exact matches but not enough, also do content-based search
-            if len(exact_matches) > 0:
-                urls.extend(exact_matches[:max_results])
-                seen_urls.update(exact_matches[:max_results])
-            
-            # Strategy 1c: If still need more results, try content analysis on article titles/previews
-            if len(urls) < max_results and len(all_story_urls) > len(exact_matches):
-                print("Analyzing article content for additional matches...")
+                score = 0
                 
-                content_matches = []
-                articles_to_check = [url for url in all_story_urls if url not in seen_urls]
+                # Higher score for exact matches in URL
+                for word in query_words:
+                    if word in url_text:
+                        score += 10
+                        # Bonus for word appearing in the story slug (after /story/)
+                        if '/story/' in url_text and word in url_text.split('/story/')[-1]:
+                            score += 5
                 
-                # Check up to 100 articles for content matches to avoid being too slow
-                for story_url in articles_to_check[:min(100, len(articles_to_check))]:
-                    try:
-                        resp = requests.get(story_url, headers=headers, timeout=8)
-                        if resp.status_code == 200:
-                            soup = BeautifulSoup(resp.content, 'lxml')
-                            
-                            # Get title and meta description
-                            title_text = ""
-                            title_elem = soup.find('h1')
-                            if title_elem:
-                                title_text = title_elem.get_text().lower()
-                            
-                            meta_desc = ""
-                            meta_elem = soup.find('meta', {'name': 'description'})
-                            if meta_elem:
-                                meta_desc = meta_elem.get('content', '').lower()
-                            
-                            # Check if query words appear in title or description
-                            combined_text = f"{title_text} {meta_desc}"
-                            if any(word in combined_text for word in query_words):
-                                content_matches.append(story_url)
-                                if len(content_matches) >= (max_results - len(urls)):
-                                    break
-                    
-                    except Exception as e:
-                        # Skip articles that fail to load
-                        continue
-                    
-                    # Small delay to be respectful
-                    time.sleep(0.5)
-                
-                print(f"Found {len(content_matches)} additional content matches")
-                
-                # Add content matches
-                remaining_slots = max_results - len(urls)
-                urls.extend(content_matches[:remaining_slots])
-                seen_urls.update(content_matches[:remaining_slots])
+                if score > 0:
+                    url_scores.append((score, story_url))
             
-            # Strategy 1d: If still not enough results, add most recent articles
-            if len(urls) < max_results:
-                remaining_slots = max_results - len(urls)
-                recent_articles = [url for url in all_story_urls if url not in seen_urls]
-                urls.extend(recent_articles[:remaining_slots])
-                seen_urls.update(recent_articles[:remaining_slots])
-                print(f"Added {min(remaining_slots, len(recent_articles))} recent articles to fill quota")
+            # Sort by relevance score and take top results
+            url_scores.sort(reverse=True, key=lambda x: x[0])
+            relevant_urls = [url for score, url in url_scores[:max_results]]
             
-            if urls:
-                print(f"Strategy 1 found {len(urls)} total articles")
+            print(f"Found {len(relevant_urls)} relevant URL matches")
+            
+            if relevant_urls:
+                urls.extend(relevant_urls)
+                seen_urls.update(relevant_urls)
+                print(f"Strategy 1 found {len(urls)} relevant articles")
+                return urls
+            
+            # Strategy 1b: If no URL matches, do limited title analysis only
+            print("No URL matches found, checking article titles...")
+            
+            title_matches = []
+            # Only check first 30 articles to keep it fast
+            for story_url in all_story_urls[:30]:
+                try:
+                    resp = requests.get(story_url, headers=headers, timeout=6)
+                    if resp.status_code == 200:
+                        soup = BeautifulSoup(resp.content, 'lxml')
+                        
+                        # Get just the title
+                        title_text = ""
+                        title_elem = soup.find('h1')
+                        if title_elem:
+                            title_text = title_elem.get_text().lower()
+                        
+                        # Check if query words appear in title
+                        title_score = 0
+                        for word in query_words:
+                            if word in title_text:
+                                title_score += 1
+                        
+                        if title_score > 0:
+                            title_matches.append((title_score, story_url))
+                            if len(title_matches) >= max_results:
+                                break
+                
+                except Exception:
+                    continue
+                
+                # Very small delay to be respectful
+                time.sleep(0.2)
+            
+            # Sort title matches by relevance
+            title_matches.sort(reverse=True, key=lambda x: x[0])
+            title_urls = [url for score, url in title_matches]
+            
+            print(f"Found {len(title_urls)} title matches")
+            
+            if title_urls:
+                urls.extend(title_urls)
+                seen_urls.update(title_urls)
+                print(f"Strategy 1 found {len(urls)} articles via title analysis")
                 return urls
         
         except Exception as e:
             print(f"Homepage scraping failed: {e}")
         
-        # Strategy 2: Try Google search as fallback
-        if len(urls) < max_results:
+        # Strategy 2: Try Google search as fallback (only if no results yet)
+        if len(urls) == 0:
             try:
                 search_query = f"site:illawarramercury.com.au {query}"
                 google_url = f"https://www.google.com/search?q={quote_plus(search_query)}"
@@ -262,13 +260,13 @@ class handler(BaseHTTPRequestHandler):
                                 if len(urls) >= max_results:
                                     break
                 
-                print(f"Google search found {len(urls)} total articles")
+                print(f"Google search found {len(urls)} articles")
 
             except Exception as e:
                 print(f"Google search fallback failed: {e}")
         
-        # Strategy 3: Try DuckDuckGo as last resort
-        if len(urls) < max_results:
+        # Strategy 3: Try DuckDuckGo as last resort (only if still no results)
+        if len(urls) == 0:
             try:
                 ddg_search_url = "https://html.duckduckgo.com/html/"
                 params = {'q': f'site:illawarramercury.com.au {query}'}
@@ -295,7 +293,7 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 print(f"DuckDuckGo search failed: {e}")
         
-        print(f"Final result: {len(urls)} articles found")
+        print(f"Final result: {len(urls)} relevant articles found")
         return urls[:max_results]
 
     def search_abc_news(self, query, max_results):
