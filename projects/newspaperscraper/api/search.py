@@ -112,15 +112,49 @@ class handler(BaseHTTPRequestHandler):
 
     def search_illawarra_mercury(self, query, max_results):
         """
-        Searches the Illawarra Mercury website using DuckDuckGo's HTML search
-        for reliability and consistency.
+        Searches the Illawarra Mercury website using a multi-strategy approach.
+        It first attempts a direct search and falls back to DuckDuckGo if needed.
         """
         try:
+            # Strategy 1: Direct Search
+            direct_search_url = f"https://www.illawarramercury.com.au/search/?q={quote_plus(query)}"
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
+            
+            resp = requests.get(direct_search_url, headers=headers, timeout=12)
+            resp.raise_for_status()
+            
+            soup = BeautifulSoup(resp.content, 'lxml')
+            
+            urls = []
+            seen_urls = set()
+
+            # This selector is based on the provided HTML and may need updates if the site changes.
+            for link in soup.select('.story-block__headline a'):
+                if len(urls) >= max_results:
+                    break
+                href = link.get('href')
+                if href:
+                    full_url = urljoin("https://www.illawarramercury.com.au", href)
+                    if full_url not in seen_urls and 'illawarramercury.com.au/story/' in full_url:
+                        seen_urls.add(full_url)
+                        urls.append(full_url)
+            
+            if urls:
+                print(f"Direct search succeeded with {len(urls)} results.")
+                return urls
+
+        except Exception as e:
+            print(f"Direct search failed: {e}. Falling back to DuckDuckGo.")
+
+        # Strategy 2: Fallback to DuckDuckGo
+        try:
             ddg_search_url = "https://html.duckduckgo.com/html/"
             params = {'q': f'site:illawarramercury.com.au {query}'}
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
             
             resp = requests.get(ddg_search_url, headers=headers, params=params, timeout=10)
             resp.raise_for_status()
@@ -142,11 +176,11 @@ class handler(BaseHTTPRequestHandler):
                             seen_urls.add(actual_url)
                             urls.append(actual_url)
             
-            print(f"DuckDuckGo search found {len(urls)} results for Illawarra Mercury.")
+            print(f"DuckDuckGo fallback search found {len(urls)} results.")
             return urls
 
         except Exception as e:
-            print(f"Error in Illawarra Mercury search: {e}")
+            print(f"DuckDuckGo fallback search also failed: {e}")
             return []
 
     def search_abc_news(self, query, max_results):
