@@ -5,9 +5,25 @@ from bs4 import BeautifulSoup
 from urllib.parse import quote_plus, urljoin, unquote
 import time
 import re
+import random
 
 
 class handler(BaseHTTPRequestHandler):
+    def get_random_user_agent(self):
+        """Return a random user agent to avoid blocking"""
+        user_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/118.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/119.0',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/119.0',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/118.0.2088.46'
+        ]
+        return random.choice(user_agents)
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
@@ -120,7 +136,62 @@ class handler(BaseHTTPRequestHandler):
         urls = []
         seen_urls = set()
         
-        # Strategy 1: Homepage and category scraping (most reliable)
+        # Strategy 1: Use site's own search function (most comprehensive)
+        try:
+            headers = {
+                'User-Agent': self.get_random_user_agent(),
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Accept-Encoding': 'gzip, deflate',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
+            }
+            
+            search_url = f"https://www.illawarramercury.com.au/search/?q={quote_plus(query)}"
+            print(f"Trying site search: {search_url}")
+            
+            resp = requests.get(search_url, headers=headers, timeout=15)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.content, 'lxml')
+            
+            # Look for search results - try multiple selectors
+            search_results = []
+            
+            # Common selectors for search results
+            for selector in [
+                'article a[href*="/story/"]',
+                '.search-result a[href*="/story/"]',
+                '.story-block a[href*="/story/"]',
+                'h3 a[href*="/story/"]',
+                'h2 a[href*="/story/"]',
+                'a[href*="/story/"]'
+            ]:
+                links = soup.select(selector)
+                if links:
+                    print(f"Found {len(links)} links with selector: {selector}")
+                    for link in links:
+                        href = link.get('href', '')
+                        if '/story/' in href:
+                            full_url = urljoin("https://www.illawarramercury.com.au", href)
+                            clean_url = full_url.split('#')[0].split('?')[0]
+                            if clean_url not in seen_urls:
+                                search_results.append(clean_url)
+                                seen_urls.add(clean_url)
+                    break  # Use first working selector
+            
+            print(f"Site search found {len(search_results)} article URLs")
+            
+            if search_results:
+                # Take the first batch of results (most relevant)
+                relevant_urls = search_results[:max_results]
+                urls.extend(relevant_urls)
+                print(f"Strategy 1 (site search) found {len(relevant_urls)} articles")
+                return urls
+        
+        except Exception as e:
+            print(f"Site search failed: {e}")
+        
+        # Strategy 2: Homepage and category scraping (fallback)
         try:
             category_urls = [
                 "https://www.illawarramercury.com.au",
@@ -131,15 +202,18 @@ class handler(BaseHTTPRequestHandler):
                 "https://www.illawarramercury.com.au/news/politics/"
             ]
             
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-            
             all_story_urls = []
             
             for category_url in category_urls:
                 try:
-                    resp = requests.get(category_url, headers=headers, timeout=12)
+                    # Use a fresh user agent for each category
+                    category_headers = {
+                        'User-Agent': self.get_random_user_agent(),
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.5',
+                        'Connection': 'keep-alive'
+                    }
+                    resp = requests.get(category_url, headers=category_headers, timeout=12)
                     resp.raise_for_status()
                     soup = BeautifulSoup(resp.content, 'lxml')
                     
@@ -227,10 +301,10 @@ class handler(BaseHTTPRequestHandler):
             if relevant_urls:
                 urls.extend(relevant_urls)
                 seen_urls.update(relevant_urls)
-                print(f"Strategy 1 found {len(urls)} relevant articles")
+                print(f"Strategy 2 found {len(urls)} relevant articles")
                 return urls
             
-            # Strategy 1b: Enhanced title and content analysis for compound terms
+            # Strategy 2b: Enhanced title and content analysis for compound terms
             print("No URL matches found, doing enhanced content analysis...")
             
             title_matches = []
@@ -239,7 +313,14 @@ class handler(BaseHTTPRequestHandler):
             
             for story_url in all_story_urls[:articles_to_check]:
                 try:
-                    resp = requests.get(story_url, headers=headers, timeout=10)  # Increased timeout from 6 to 10
+                    # Use fresh random user agent for each article
+                    article_headers = {
+                        'User-Agent': self.get_random_user_agent(),
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.5',
+                        'Connection': 'keep-alive'
+                    }
+                    resp = requests.get(story_url, headers=article_headers, timeout=8)  # Reduced timeout for speed
                     if resp.status_code == 200:
                         soup = BeautifulSoup(resp.content, 'lxml')
                         
@@ -344,10 +425,10 @@ class handler(BaseHTTPRequestHandler):
             if title_urls:
                 urls.extend(title_urls)
                 seen_urls.update(title_urls)
-                print(f"Strategy 1 found {len(urls)} articles via content analysis")
+                print(f"Strategy 2 found {len(urls)} articles via content analysis")
                 return urls
             
-            # Strategy 1c: If still no results for compound terms, try broader single-word search
+            # Strategy 2c: If still no results for compound terms, try broader single-word search
             if len(query_words) > 1 and len(urls) < 3:
                 print(f"Limited results for compound term, trying broader search...")
                 broader_matches = []
@@ -357,7 +438,12 @@ class handler(BaseHTTPRequestHandler):
                 
                 for story_url in all_story_urls[:60]:  # Check more articles
                     try:
-                        resp = requests.get(story_url, headers=headers, timeout=5)
+                        broader_headers = {
+                            'User-Agent': self.get_random_user_agent(),
+                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                            'Connection': 'keep-alive'
+                        }
+                        resp = requests.get(story_url, headers=broader_headers, timeout=5)
                         if resp.status_code == 200:
                             soup = BeautifulSoup(resp.content, 'lxml')
                             
@@ -403,41 +489,75 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             print(f"Homepage scraping failed: {e}")
         
-        # Strategy 2: Try Google search as fallback (only if no results yet)
+        # Strategy 3: Enhanced Google search as fallback (can access full archive)
         if len(urls) == 0:
             try:
-                search_query = f"site:illawarramercury.com.au {query}"
-                google_url = f"https://www.google.com/search?q={quote_plus(search_query)}"
+                # Try both quoted and unquoted searches for better coverage
+                search_queries = [
+                    f'site:illawarramercury.com.au "{query}"',  # Exact phrase first
+                    f'site:illawarramercury.com.au {query}',    # Individual words
+                ]
                 
-                resp = requests.get(google_url, headers=headers, timeout=10)
-                resp.raise_for_status()
-                soup = BeautifulSoup(resp.text, 'lxml')
+                for search_query in search_queries:
+                    print(f"Trying Google search: {search_query}")
+                    google_url = f"https://www.google.com/search?q={quote_plus(search_query)}&num=20"
+                    
+                    google_headers = {
+                        'User-Agent': self.get_random_user_agent(),
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.9',
+                        'Accept-Encoding': 'gzip, deflate, br',
+                        'Connection': 'keep-alive'
+                    }
+                    
+                    resp = requests.get(google_url, headers=google_headers, timeout=12)
+                    resp.raise_for_status()
+                    soup = BeautifulSoup(resp.text, 'lxml')
 
-                for link in soup.find_all('a'):
-                    href = link.get('href', '')
-                    if '/url?q=' in href:
-                        # Extract actual URL from Google redirect
-                        match = re.search(r'/url\?q=([^&]+)', href)
-                        if match:
-                            actual_url = unquote(match.group(1))
-                            if 'illawarramercury.com.au/story/' in actual_url and actual_url not in seen_urls:
-                                seen_urls.add(actual_url)
-                                urls.append(actual_url)
-                                if len(urls) >= max_results:
-                                    break
+                    found_in_this_search = 0
+                    for link in soup.find_all('a'):
+                        href = link.get('href', '')
+                        if '/url?q=' in href:
+                            # Extract actual URL from Google redirect
+                            match = re.search(r'/url\?q=([^&]+)', href)
+                            if match:
+                                actual_url = unquote(match.group(1))
+                                if 'illawarramercury.com.au/story/' in actual_url:
+                                    clean_url = actual_url.split('#')[0].split('?')[0]
+                                    if clean_url not in seen_urls:
+                                        seen_urls.add(clean_url)
+                                        urls.append(clean_url)
+                                        found_in_this_search += 1
+                                        if len(urls) >= max_results:
+                                            break
+                    
+                    print(f"Found {found_in_this_search} new articles with this query")
+                    if len(urls) >= max_results:
+                        break
+                    
+                    time.sleep(1)  # Small delay between searches
                 
-                print(f"Google search found {len(urls)} articles")
+                print(f"Google search found {len(urls)} total articles")
+                if urls:
+                    return urls
 
             except Exception as e:
                 print(f"Google search fallback failed: {e}")
         
-        # Strategy 3: Try DuckDuckGo as last resort (only if still no results)
+        # Strategy 4: Try DuckDuckGo as last resort (only if still no results)
         if len(urls) == 0:
             try:
                 ddg_search_url = "https://html.duckduckgo.com/html/"
                 params = {'q': f'site:illawarramercury.com.au {query}'}
                 
-                resp = requests.get(ddg_search_url, headers=headers, params=params, timeout=10)
+                ddg_headers = {
+                    'User-Agent': self.get_random_user_agent(),
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                    'Connection': 'keep-alive'
+                }
+                
+                resp = requests.get(ddg_search_url, headers=ddg_headers, params=params, timeout=10)
                 resp.raise_for_status()
                 soup = BeautifulSoup(resp.text, 'lxml')
 
@@ -468,7 +588,10 @@ class handler(BaseHTTPRequestHandler):
             base_url = "https://www.abc.net.au"
             search_url = f"https://www.abc.net.au/news/search?query={quote_plus(query)}"
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Educational Research Tool)'
+                'User-Agent': self.get_random_user_agent(),
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Connection': 'keep-alive'
             }
             response = requests.get(search_url, headers=headers, timeout=10)
             response.raise_for_status()
@@ -495,7 +618,10 @@ class handler(BaseHTTPRequestHandler):
             base_url = "https://www.theguardian.com"
             search_url = f"https://www.theguardian.com/search?q={quote_plus(query)}"
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Educational Research Tool)'
+                'User-Agent': self.get_random_user_agent(),
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Connection': 'keep-alive'
             }
             response = requests.get(search_url, headers=headers, timeout=10)
             response.raise_for_status()
