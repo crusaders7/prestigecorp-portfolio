@@ -127,7 +127,11 @@ class handler(BaseHTTPRequestHandler):
                 "https://www.illawarramercury.com.au/news/",
                 "https://www.illawarramercury.com.au/sport/",
                 "https://www.illawarramercury.com.au/news/local/",
-                "https://www.illawarramercury.com.au/news/business/"
+                "https://www.illawarramercury.com.au/news/business/",
+                "https://www.illawarramercury.com.au/news/national/",
+                "https://www.illawarramercury.com.au/lifestyle/",
+                "https://www.illawarramercury.com.au/entertainment/",
+                "https://www.illawarramercury.com.au/opinion/"
             ]
             
             headers = {
@@ -142,92 +146,157 @@ class handler(BaseHTTPRequestHandler):
                     resp.raise_for_status()
                     soup = BeautifulSoup(resp.content, 'lxml')
                     
-                    # Find all story links
+                    # Find all story links with more comprehensive search
                     for link in soup.find_all('a', href=True):
                         href = link['href']
                         if '/story/' in href:
                             full_url = urljoin("https://www.illawarramercury.com.au", href)
-                            if full_url not in all_story_urls:
+                            # Remove comment links and duplicates
+                            if '#comments' not in full_url and full_url not in all_story_urls:
                                 all_story_urls.append(full_url)
                 
                 except Exception as e:
                     print(f"Failed to scrape category {category_url}: {e}")
                     continue
             
-            # Filter by query relevance
-            query_words = query.lower().split()
+            print(f"Found {len(all_story_urls)} total articles from categories")
+            
+            # Strategy 1a: First try exact keyword matching in URLs
+            query_words = [word.lower() for word in query.split() if len(word) > 2]  # Skip short words
+            exact_matches = []
+            
             for story_url in all_story_urls:
                 url_text = story_url.lower()
+                # Check if URL contains any of the query words
                 if any(word in url_text for word in query_words):
-                    if story_url not in seen_urls and not story_url.endswith('#comments'):
-                        seen_urls.add(story_url)
-                        urls.append(story_url)
-                        if len(urls) >= max_results:
-                            break
+                    exact_matches.append(story_url)
+            
+            print(f"Found {len(exact_matches)} exact URL matches")
+            
+            # Strategy 1b: If we have exact matches but not enough, also do content-based search
+            if len(exact_matches) > 0:
+                urls.extend(exact_matches[:max_results])
+                seen_urls.update(exact_matches[:max_results])
+            
+            # Strategy 1c: If still need more results, try content analysis on article titles/previews
+            if len(urls) < max_results and len(all_story_urls) > len(exact_matches):
+                print("Analyzing article content for additional matches...")
+                
+                content_matches = []
+                articles_to_check = [url for url in all_story_urls if url not in seen_urls]
+                
+                # Check up to 100 articles for content matches to avoid being too slow
+                for story_url in articles_to_check[:min(100, len(articles_to_check))]:
+                    try:
+                        resp = requests.get(story_url, headers=headers, timeout=8)
+                        if resp.status_code == 200:
+                            soup = BeautifulSoup(resp.content, 'lxml')
+                            
+                            # Get title and meta description
+                            title_text = ""
+                            title_elem = soup.find('h1')
+                            if title_elem:
+                                title_text = title_elem.get_text().lower()
+                            
+                            meta_desc = ""
+                            meta_elem = soup.find('meta', {'name': 'description'})
+                            if meta_elem:
+                                meta_desc = meta_elem.get('content', '').lower()
+                            
+                            # Check if query words appear in title or description
+                            combined_text = f"{title_text} {meta_desc}"
+                            if any(word in combined_text for word in query_words):
+                                content_matches.append(story_url)
+                                if len(content_matches) >= (max_results - len(urls)):
+                                    break
+                    
+                    except Exception as e:
+                        # Skip articles that fail to load
+                        continue
+                    
+                    # Small delay to be respectful
+                    time.sleep(0.5)
+                
+                print(f"Found {len(content_matches)} additional content matches")
+                
+                # Add content matches
+                remaining_slots = max_results - len(urls)
+                urls.extend(content_matches[:remaining_slots])
+                seen_urls.update(content_matches[:remaining_slots])
+            
+            # Strategy 1d: If still not enough results, add most recent articles
+            if len(urls) < max_results:
+                remaining_slots = max_results - len(urls)
+                recent_articles = [url for url in all_story_urls if url not in seen_urls]
+                urls.extend(recent_articles[:remaining_slots])
+                seen_urls.update(recent_articles[:remaining_slots])
+                print(f"Added {min(remaining_slots, len(recent_articles))} recent articles to fill quota")
             
             if urls:
-                print(f"Homepage scraping found {len(urls)} relevant articles.")
+                print(f"Strategy 1 found {len(urls)} total articles")
                 return urls
         
         except Exception as e:
             print(f"Homepage scraping failed: {e}")
         
         # Strategy 2: Try Google search as fallback
-        try:
-            search_query = f"site:illawarramercury.com.au {query}"
-            google_url = f"https://www.google.com/search?q={quote_plus(search_query)}"
-            
-            resp = requests.get(google_url, headers=headers, timeout=10)
-            resp.raise_for_status()
-            soup = BeautifulSoup(resp.text, 'lxml')
+        if len(urls) < max_results:
+            try:
+                search_query = f"site:illawarramercury.com.au {query}"
+                google_url = f"https://www.google.com/search?q={quote_plus(search_query)}"
+                
+                resp = requests.get(google_url, headers=headers, timeout=10)
+                resp.raise_for_status()
+                soup = BeautifulSoup(resp.text, 'lxml')
 
-            for link in soup.find_all('a'):
-                href = link.get('href', '')
-                if '/url?q=' in href:
-                    # Extract actual URL from Google redirect
-                    match = re.search(r'/url\?q=([^&]+)', href)
-                    if match:
-                        actual_url = unquote(match.group(1))
-                        if 'illawarramercury.com.au/story/' in actual_url and actual_url not in seen_urls:
-                            seen_urls.add(actual_url)
-                            urls.append(actual_url)
-                            if len(urls) >= max_results:
-                                break
-            
-            print(f"Google search found {len(urls)} additional articles.")
-            return urls
+                for link in soup.find_all('a'):
+                    href = link.get('href', '')
+                    if '/url?q=' in href:
+                        # Extract actual URL from Google redirect
+                        match = re.search(r'/url\?q=([^&]+)', href)
+                        if match:
+                            actual_url = unquote(match.group(1))
+                            if 'illawarramercury.com.au/story/' in actual_url and actual_url not in seen_urls:
+                                seen_urls.add(actual_url)
+                                urls.append(actual_url)
+                                if len(urls) >= max_results:
+                                    break
+                
+                print(f"Google search found {len(urls)} total articles")
 
-        except Exception as e:
-            print(f"Google search fallback also failed: {e}")
+            except Exception as e:
+                print(f"Google search fallback failed: {e}")
         
         # Strategy 3: Try DuckDuckGo as last resort
-        try:
-            ddg_search_url = "https://html.duckduckgo.com/html/"
-            params = {'q': f'site:illawarramercury.com.au {query}'}
-            
-            resp = requests.get(ddg_search_url, headers=headers, params=params, timeout=10)
-            resp.raise_for_status()
-            soup = BeautifulSoup(resp.text, 'lxml')
+        if len(urls) < max_results:
+            try:
+                ddg_search_url = "https://html.duckduckgo.com/html/"
+                params = {'q': f'site:illawarramercury.com.au {query}'}
+                
+                resp = requests.get(ddg_search_url, headers=headers, params=params, timeout=10)
+                resp.raise_for_status()
+                soup = BeautifulSoup(resp.text, 'lxml')
 
-            for link in soup.find_all('a', class_='result__a'):
-                href = link.get('href')
-                if href:
-                    clean_url = unquote(href)
-                    match = re.search(r'uddg=([^&]+)', clean_url)
-                    if match:
-                        actual_url = unquote(match.group(1))
-                        if 'illawarramercury.com.au/story/' in actual_url and actual_url not in seen_urls:
-                            seen_urls.add(actual_url)
-                            urls.append(actual_url)
-                            if len(urls) >= max_results:
-                                break
-            
-            print(f"DuckDuckGo search found {len(urls)} articles.")
-            return urls
+                for link in soup.find_all('a', class_='result__a'):
+                    href = link.get('href')
+                    if href:
+                        clean_url = unquote(href)
+                        match = re.search(r'uddg=([^&]+)', clean_url)
+                        if match:
+                            actual_url = unquote(match.group(1))
+                            if 'illawarramercury.com.au/story/' in actual_url and actual_url not in seen_urls:
+                                seen_urls.add(actual_url)
+                                urls.append(actual_url)
+                                if len(urls) >= max_results:
+                                    break
+                
+                print(f"DuckDuckGo search found {len(urls)} total articles")
 
-        except Exception as e:
-            print(f"All search strategies failed: {e}")
-            return []
+            except Exception as e:
+                print(f"DuckDuckGo search failed: {e}")
+        
+        print(f"Final result: {len(urls)} articles found")
+        return urls[:max_results]
 
     def search_abc_news(self, query, max_results):
         """Searches ABC News for a given query."""
