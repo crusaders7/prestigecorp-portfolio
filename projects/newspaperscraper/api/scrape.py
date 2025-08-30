@@ -134,33 +134,103 @@ class handler(BaseHTTPRequestHandler):
     def extract_illawarra_mercury_data(self, soup, url):
         """Extracts article data specifically for Illawarra Mercury"""
         try:
-            # Title
-            title_elem = soup.find('h1', attrs={'data-testid': 'story-title'})
-            title = title_elem.get_text(
-                strip=True) if title_elem else self.extract_title(soup)
+            # Title - try multiple selectors
+            title_selectors = [
+                'h1[data-testid="story-title"]',
+                'h1',
+                '.story-title',
+                '.headline'
+            ]
+            title = 'No title found'
+            for selector in title_selectors:
+                title_elem = soup.select_one(selector)
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    break
 
-            # Author
-            author_elem = soup.find('a', attrs={'data-testid': 'author-link'})
-            author = author_elem.get_text(
-                strip=True) if author_elem else 'No author found'
+            # Author - try multiple selectors
+            author_selectors = [
+                'a[data-testid="author-link"]',
+                '.author',
+                '.byline'
+            ]
+            author = 'No author found'
+            for selector in author_selectors:
+                author_elem = soup.select_one(selector)
+                if author_elem:
+                    author = author_elem.get_text(strip=True)
+                    break
 
             # Date
             date_str = self.extract_date(soup)
 
-            # Content
+            # Content extraction - multiple strategies for Illawarra Mercury
             content = ''
-            story_body_div = soup.find('div', id='story-body')
-            if story_body_div:
-                paragraphs = story_body_div.find_all(
-                    'p', class_='Paragraph_wrapper__6w7GG')
-                content = "\n\n".join([p.get_text(strip=True)
-                                      for p in paragraphs])
-
-            if not content:  # Fallback to generic extraction if specific one fails
+            
+            # Strategy 1: Look for visible content before paywall
+            visible_content_selectors = [
+                'div.mx-auto.mb-6.px-4 p',  # Based on HTML structure seen
+                '.story-body p',
+                '.article-body p',
+                '.content p'
+            ]
+            
+            paragraphs = []
+            for selector in visible_content_selectors:
+                elements = soup.select(selector)
+                for elem in elements:
+                    text = elem.get_text(strip=True)
+                    if text and len(text) > 30:  # Only substantial paragraphs
+                        paragraphs.append(text)
+            
+            if paragraphs:
+                content = '\n\n'.join(paragraphs)
+            
+            # Strategy 2: Look for JSON-LD structured data (sometimes contains full content)
+            if not content or len(content) < 200:
+                json_scripts = soup.find_all('script', type='application/ld+json')
+                for script in json_scripts:
+                    try:
+                        data = json.loads(script.string)
+                        if isinstance(data, dict) and 'articleBody' in data:
+                            content = data['articleBody']
+                            break
+                        elif isinstance(data, list):
+                            for item in data:
+                                if isinstance(item, dict) and 'articleBody' in item:
+                                    content = item['articleBody']
+                                    break
+                    except:
+                        continue
+            
+            # Strategy 3: Extract from meta description if nothing else works
+            if not content or len(content) < 100:
+                meta_desc = soup.find('meta', attrs={'name': 'description'})
+                if meta_desc:
+                    content = meta_desc.get('content', '')
+            
+            # Strategy 4: Fallback to generic extraction
+            if not content or len(content) < 100:
                 content = self.extract_content(soup)
 
             # Clean content
             content = self.clean_article_content(content)
+            
+            # Additional cleaning for Illawarra Mercury specific elements
+            if content:
+                # Remove common Illawarra Mercury specific text
+                remove_phrases = [
+                    'Subscribe today for the news that matters',
+                    'Login or signup to continue reading',
+                    'Your digital subscription includes access',
+                    'LIMITED TIME OFFER'
+                ]
+                
+                for phrase in remove_phrases:
+                    content = content.replace(phrase, '')
+                
+                # Clean up extra whitespace
+                content = '\n\n'.join([p.strip() for p in content.split('\n\n') if p.strip()])
 
             return {
                 'url': url,
@@ -170,6 +240,7 @@ class handler(BaseHTTPRequestHandler):
                 'content': content,
                 'scraped_at': datetime.now().isoformat()
             }
+            
         except Exception as e:
             print(f"Error in extract_illawarra_mercury_data for {url}: {e}")
             # Fallback to generic extraction on specific error

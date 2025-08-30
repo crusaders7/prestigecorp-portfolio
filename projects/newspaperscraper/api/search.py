@@ -113,75 +113,120 @@ class handler(BaseHTTPRequestHandler):
     def search_illawarra_mercury(self, query, max_results):
         """
         Searches the Illawarra Mercury website using a multi-strategy approach.
-        It first attempts a direct search and falls back to DuckDuckGo if needed.
+        Uses homepage/category scraping as primary method since search is unreliable.
         """
         print(f"Searching Illawarra Mercury for '{query}'...")
+        
+        urls = []
+        seen_urls = set()
+        
+        # Strategy 1: Homepage and category scraping (most reliable)
         try:
-            # Strategy 1: Direct Search
-            direct_search_url = f"https://www.illawarramercury.com.au/search/?q={quote_plus(query)}"
+            category_urls = [
+                "https://www.illawarramercury.com.au",
+                "https://www.illawarramercury.com.au/news/",
+                "https://www.illawarramercury.com.au/sport/",
+                "https://www.illawarramercury.com.au/news/local/",
+                "https://www.illawarramercury.com.au/news/business/"
+            ]
+            
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
             
-            resp = requests.get(direct_search_url, headers=headers, timeout=12)
-            resp.raise_for_status()
+            all_story_urls = []
             
-            soup = BeautifulSoup(resp.content, 'lxml')
+            for category_url in category_urls:
+                try:
+                    resp = requests.get(category_url, headers=headers, timeout=12)
+                    resp.raise_for_status()
+                    soup = BeautifulSoup(resp.content, 'lxml')
+                    
+                    # Find all story links
+                    for link in soup.find_all('a', href=True):
+                        href = link['href']
+                        if '/story/' in href:
+                            full_url = urljoin("https://www.illawarramercury.com.au", href)
+                            if full_url not in all_story_urls:
+                                all_story_urls.append(full_url)
+                
+                except Exception as e:
+                    print(f"Failed to scrape category {category_url}: {e}")
+                    continue
             
-            urls = []
-            seen_urls = set()
-
-            # Updated, more flexible selector based on potential site structures
-            for link in soup.select('.story-block__headline a, div.story-block a[href]'):
-                if len(urls) >= max_results:
-                    break
-                href = link.get('href')
-                if href:
-                    full_url = urljoin("https://www.illawarramercury.com.au", href)
-                    if full_url not in seen_urls and 'illawarramercury.com.au/story/' in full_url:
-                        seen_urls.add(full_url)
-                        urls.append(full_url)
+            # Filter by query relevance
+            query_words = query.lower().split()
+            for story_url in all_story_urls:
+                url_text = story_url.lower()
+                if any(word in url_text for word in query_words):
+                    if story_url not in seen_urls and not story_url.endswith('#comments'):
+                        seen_urls.add(story_url)
+                        urls.append(story_url)
+                        if len(urls) >= max_results:
+                            break
             
             if urls:
-                print(f"Direct search succeeded with {len(urls)} results.")
+                print(f"Homepage scraping found {len(urls)} relevant articles.")
                 return urls
+        
+        except Exception as e:
+            print(f"Homepage scraping failed: {e}")
+        
+        # Strategy 2: Try Google search as fallback
+        try:
+            search_query = f"site:illawarramercury.com.au {query}"
+            google_url = f"https://www.google.com/search?q={quote_plus(search_query)}"
+            
+            resp = requests.get(google_url, headers=headers, timeout=10)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, 'lxml')
+
+            for link in soup.find_all('a'):
+                href = link.get('href', '')
+                if '/url?q=' in href:
+                    # Extract actual URL from Google redirect
+                    match = re.search(r'/url\?q=([^&]+)', href)
+                    if match:
+                        actual_url = unquote(match.group(1))
+                        if 'illawarramercury.com.au/story/' in actual_url and actual_url not in seen_urls:
+                            seen_urls.add(actual_url)
+                            urls.append(actual_url)
+                            if len(urls) >= max_results:
+                                break
+            
+            print(f"Google search found {len(urls)} additional articles.")
+            return urls
 
         except Exception as e:
-            print(f"Direct search failed: {e}. Falling back to DuckDuckGo.")
-
-        # Strategy 2: Fallback to DuckDuckGo
+            print(f"Google search fallback also failed: {e}")
+        
+        # Strategy 3: Try DuckDuckGo as last resort
         try:
             ddg_search_url = "https://html.duckduckgo.com/html/"
             params = {'q': f'site:illawarramercury.com.au {query}'}
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
             
             resp = requests.get(ddg_search_url, headers=headers, params=params, timeout=10)
             resp.raise_for_status()
             soup = BeautifulSoup(resp.text, 'lxml')
 
-            urls = []
-            seen_urls = set()
-
             for link in soup.find_all('a', class_='result__a'):
-                if len(urls) >= max_results:
-                    break
                 href = link.get('href')
                 if href:
                     clean_url = unquote(href)
                     match = re.search(r'uddg=([^&]+)', clean_url)
                     if match:
                         actual_url = unquote(match.group(1))
-                        if actual_url not in seen_urls and 'illawarramercury.com.au/story/' in actual_url:
+                        if 'illawarramercury.com.au/story/' in actual_url and actual_url not in seen_urls:
                             seen_urls.add(actual_url)
                             urls.append(actual_url)
+                            if len(urls) >= max_results:
+                                break
             
-            print(f"DuckDuckGo fallback search found {len(urls)} results.")
+            print(f"DuckDuckGo search found {len(urls)} articles.")
             return urls
 
         except Exception as e:
-            print(f"DuckDuckGo fallback search also failed: {e}")
+            print(f"All search strategies failed: {e}")
             return []
 
     def search_abc_news(self, query, max_results):
