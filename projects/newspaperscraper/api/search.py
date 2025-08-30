@@ -182,16 +182,16 @@ class handler(BaseHTTPRequestHandler):
             print(f"Site search found {len(search_results)} article URLs")
             
             if search_results:
-                # Take the first batch of results (most relevant)
+                # Take the first batch of results but don't return yet - continue to Strategy 2
                 relevant_urls = search_results[:max_results]
                 urls.extend(relevant_urls)
-                print(f"Strategy 1 (site search) found {len(relevant_urls)} articles")
-                return urls
+                print(f"Strategy 1 (site search) collected {len(relevant_urls)} articles")
         
         except Exception as e:
             print(f"Site search failed: {e}")
         
-        # Strategy 2: Homepage and category scraping (fallback)
+        # Strategy 2: Homepage and category scraping (always execute)
+        print(f"Proceeding to Strategy 2 (category scraping)...")
         try:
             category_urls = [
                 "https://www.illawarramercury.com.au",
@@ -301,8 +301,10 @@ class handler(BaseHTTPRequestHandler):
             if relevant_urls:
                 urls.extend(relevant_urls)
                 seen_urls.update(relevant_urls)
-                print(f"Strategy 2 found {len(urls)} relevant articles")
-                return urls
+                print(f"Strategy 2 (category scraping) found {len(relevant_urls)} relevant articles")
+            
+            print(f"Total articles after Strategy 2: {len(urls)}")
+            print(f"Proceeding to Strategy 3 (Google search)...")
             
             # Strategy 2b: Enhanced title and content analysis for compound terms
             print("No URL matches found, doing enhanced content analysis...")
@@ -425,8 +427,10 @@ class handler(BaseHTTPRequestHandler):
             if title_urls:
                 urls.extend(title_urls)
                 seen_urls.update(title_urls)
-                print(f"Strategy 2 found {len(urls)} articles via content analysis")
-                return urls
+                print(f"Strategy 2 content analysis found {len(title_urls)} additional articles")
+            
+            print(f"Total articles after Strategy 2 content analysis: {len(urls)}")
+            print(f"Proceeding to Strategy 3 (Google search)...")
             
             # Strategy 2c: If still no results for compound terms, try broader single-word search
             if len(query_words) > 1 and len(urls) < 3:
@@ -483,103 +487,109 @@ class handler(BaseHTTPRequestHandler):
                 if broader_urls:
                     urls.extend(broader_urls)
                     seen_urls.update(broader_urls)
-                    print(f"Added {len(broader_urls)} broader matches")
-                    return urls
+                    print(f"Strategy 2c (broader search) found {len(broader_urls)} additional articles")
+            
+            print(f"Total articles after all Strategy 2 approaches: {len(urls)}")
+            print(f"Proceeding to Strategy 3 (Google search)...")
         
         except Exception as e:
             print(f"Homepage scraping failed: {e}")
+            print(f"Proceeding to Strategy 3 (Google search)...")
         
-        # Strategy 3: Enhanced Google search as fallback (can access full archive)
-        if len(urls) == 0:
-            try:
-                # Try both quoted and unquoted searches for better coverage
-                search_queries = [
-                    f'site:illawarramercury.com.au "{query}"',  # Exact phrase first
-                    f'site:illawarramercury.com.au {query}',    # Individual words
-                ]
+        # Strategy 3: Enhanced Google search (can access full archive)
+        try:
+            # Try both quoted and unquoted searches for better coverage
+            search_queries = [
+                f'site:illawarramercury.com.au "{query}"',  # Exact phrase first
+                f'site:illawarramercury.com.au {query}',    # Individual words
+            ]
+            
+            google_results = []
+            for search_query in search_queries:
+                print(f"Trying Google search: {search_query}")
+                google_url = f"https://www.google.com/search?q={quote_plus(search_query)}&num=20"
                 
-                for search_query in search_queries:
-                    print(f"Trying Google search: {search_query}")
-                    google_url = f"https://www.google.com/search?q={quote_plus(search_query)}&num=20"
-                    
-                    google_headers = {
-                        'User-Agent': self.get_random_user_agent(),
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                        'Accept-Language': 'en-US,en;q=0.9',
-                        'Accept-Encoding': 'gzip, deflate, br',
-                        'Connection': 'keep-alive'
-                    }
-                    
-                    resp = requests.get(google_url, headers=google_headers, timeout=12)
-                    resp.raise_for_status()
-                    soup = BeautifulSoup(resp.text, 'lxml')
-
-                    found_in_this_search = 0
-                    for link in soup.find_all('a'):
-                        href = link.get('href', '')
-                        if '/url?q=' in href:
-                            # Extract actual URL from Google redirect
-                            match = re.search(r'/url\?q=([^&]+)', href)
-                            if match:
-                                actual_url = unquote(match.group(1))
-                                if 'illawarramercury.com.au/story/' in actual_url:
-                                    clean_url = actual_url.split('#')[0].split('?')[0]
-                                    if clean_url not in seen_urls:
-                                        seen_urls.add(clean_url)
-                                        urls.append(clean_url)
-                                        found_in_this_search += 1
-                                        if len(urls) >= max_results:
-                                            break
-                    
-                    print(f"Found {found_in_this_search} new articles with this query")
-                    if len(urls) >= max_results:
-                        break
-                    
-                    time.sleep(1)  # Small delay between searches
-                
-                print(f"Google search found {len(urls)} total articles")
-                if urls:
-                    return urls
-
-            except Exception as e:
-                print(f"Google search fallback failed: {e}")
-        
-        # Strategy 4: Try DuckDuckGo as last resort (only if still no results)
-        if len(urls) == 0:
-            try:
-                ddg_search_url = "https://html.duckduckgo.com/html/"
-                params = {'q': f'site:illawarramercury.com.au {query}'}
-                
-                ddg_headers = {
+                google_headers = {
                     'User-Agent': self.get_random_user_agent(),
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.5',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
                     'Connection': 'keep-alive'
                 }
                 
-                resp = requests.get(ddg_search_url, headers=ddg_headers, params=params, timeout=10)
+                resp = requests.get(google_url, headers=google_headers, timeout=12)
                 resp.raise_for_status()
                 soup = BeautifulSoup(resp.text, 'lxml')
 
-                for link in soup.find_all('a', class_='result__a'):
-                    href = link.get('href')
-                    if href:
-                        clean_url = unquote(href)
-                        match = re.search(r'uddg=([^&]+)', clean_url)
+                found_in_this_search = 0
+                for link in soup.find_all('a'):
+                    href = link.get('href', '')
+                    if '/url?q=' in href:
+                        # Extract actual URL from Google redirect
+                        match = re.search(r'/url\?q=([^&]+)', href)
                         if match:
                             actual_url = unquote(match.group(1))
-                            if 'illawarramercury.com.au/story/' in actual_url and actual_url not in seen_urls:
-                                seen_urls.add(actual_url)
-                                urls.append(actual_url)
-                                if len(urls) >= max_results:
-                                    break
+                            if 'illawarramercury.com.au/story/' in actual_url:
+                                clean_url = actual_url.split('#')[0].split('?')[0]
+                                if clean_url not in seen_urls:
+                                    seen_urls.add(clean_url)
+                                    google_results.append(clean_url)
+                                    found_in_this_search += 1
+                                    if len(google_results) >= max_results:
+                                        break
                 
-                print(f"DuckDuckGo search found {len(urls)} total articles")
+                print(f"Found {found_in_this_search} new articles with this query")
+                if len(google_results) >= max_results:
+                    break
+                
+                time.sleep(1)  # Small delay between searches
+            
+            urls.extend(google_results)
+            print(f"Strategy 3 (Google search) found {len(google_results)} additional articles")
+            print(f"Total articles after Strategy 3: {len(urls)}")
+            print(f"Proceeding to Strategy 4 (DuckDuckGo search)...")
 
-            except Exception as e:
-                print(f"DuckDuckGo search failed: {e}")
+        except Exception as e:
+            print(f"Google search failed: {e}")
+            print(f"Proceeding to Strategy 4 (DuckDuckGo search)...")
         
-        print(f"Final result: {len(urls)} relevant articles found")
+        # Strategy 4: Try DuckDuckGo as final fallback
+        try:
+            ddg_search_url = "https://html.duckduckgo.com/html/"
+            params = {'q': f'site:illawarramercury.com.au {query}'}
+            
+            ddg_headers = {
+                'User-Agent': self.get_random_user_agent(),
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Connection': 'keep-alive'
+            }
+            
+            resp = requests.get(ddg_search_url, headers=ddg_headers, params=params, timeout=10)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, 'lxml')
+
+            ddg_results = []
+            for link in soup.find_all('a', class_='result__a'):
+                href = link.get('href')
+                if href:
+                    clean_url = unquote(href)
+                    match = re.search(r'uddg=([^&]+)', clean_url)
+                    if match:
+                        actual_url = unquote(match.group(1))
+                        if 'illawarramercury.com.au/story/' in actual_url and actual_url not in seen_urls:
+                            seen_urls.add(actual_url)
+                            ddg_results.append(actual_url)
+                            if len(ddg_results) >= max_results:
+                                break
+            
+            urls.extend(ddg_results)
+            print(f"Strategy 4 (DuckDuckGo search) found {len(ddg_results)} additional articles")
+
+        except Exception as e:
+            print(f"DuckDuckGo search failed: {e}")
+        
+        print(f"Final result: {len(urls)} relevant articles found across all strategies")
         return urls[:max_results]
 
     def search_abc_news(self, query, max_results):
@@ -657,5 +667,14 @@ class handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(b'Internal server error')
             except:
-                print(
-                    f"Critical error - unable to send any response: {message}")
+                print(f"Critical error - unable to send any response: {message}")
+
+if __name__ == '__main__':
+    from http.server import HTTPServer
+    server = HTTPServer(('localhost', 8000), handler)
+    print("Server starting on http://localhost:8000")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nServer stopped.")
+        server.shutdown()
