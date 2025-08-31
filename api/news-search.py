@@ -1,9 +1,7 @@
 from http.server import BaseHTTPRequestHandler
 import json
 import requests
-from bs4 import BeautifulSoup
-from urllib.parse import quote_plus, urljoin
-
+import os
 
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
@@ -15,124 +13,113 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            content_length = int(self.headers.get('Content-Length', 0))
-            if content_length == 0:
-                self.send_error_response(400, 'No data received')
-                return
-
+            # Read the request body
+            content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
-
-            try:
-                data = json.loads(post_data.decode('utf-8'))
-            except json.JSONDecodeError as e:
-                self.send_error_response(400, f'Invalid JSON data: {str(e)}')
-                return
-            except UnicodeDecodeError as e:
-                self.send_error_response(
-                    400, f'Invalid UTF-8 encoding: {str(e)}')
-                return
-
-            query = data.get('query', '').strip()
-
-            try:
-                max_results = min(int(data.get('max_results', 10)), 20)
-            except (ValueError, TypeError):
-                max_results = 10
-
-            if not query:
-                self.send_error_response(400, 'Please enter a search term')
-                return
-
-            article_urls = self.search_illawarra_mercury(query, max_results)
-
-            if not article_urls:
-                self.send_error_response(
-                    404, f'No articles found for \"{query}\" in Illawarra Mercury.')
-                return
-
+            request_data = json.loads(post_data.decode('utf-8'))
+            
+            # Extract search parameters
+            query = request_data.get('query', '')
+            max_results = min(request_data.get('max_results', 10), 10)  # Limit to 10 for cost control
+            
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            response = {
-                'query': query,
-                'found': len(article_urls),
-                'urls': article_urls,
-                'sources_searched': ['mercury']
-            }
-            self.wfile.write(json.dumps(response).encode())
+
+            # Google CSE configuration
+            api_key = "AIzaSyDUfCvNOnT7K6GC5_9fLe6yE-p5pQys9N0"
+            cse_id = "012527284968046999840:zzi3qgsoibq"
+            api_endpoint = "https://www.googleapis.com/customsearch/v1"
+
+            if query and len(query.strip()) >= 2:
+                try:
+                    # Make Google CSE API call
+                    params = {
+                        'key': api_key,
+                        'cx': cse_id,
+                        'q': query.strip(),
+                        'num': max_results,
+                        'safe': 'off',
+                        'fields': 'items(title,link,snippet,displayLink),searchInformation(totalResults,searchTime)'
+                    }
+                    
+                    cse_response = requests.get(api_endpoint, params=params, timeout=30)
+                    
+                    if cse_response.status_code == 200:
+                        data = cse_response.json()
+                        items = data.get('items', [])
+                        
+                        # Convert to expected format
+                        formatted_articles = []
+                        article_urls = []
+                        
+                        for item in items:
+                            article_url = item.get('link', '')
+                            formatted_articles.append({
+                                'title': item.get('title', ''),
+                                'url': article_url,
+                                'snippet': item.get('snippet', ''),
+                                'source': 'Illawarra Mercury',
+                                'domain': item.get('displayLink', 'illawarramercury.com.au')
+                            })
+                            article_urls.append(article_url)
+                        
+                        response = {
+                            'status': 'success',
+                            'query': query,
+                            'found': len(formatted_articles),
+                            'articles': formatted_articles,
+                            'sources_searched': ['illawarra_mercury'],
+                            'total_results': data.get('searchInformation', {}).get('totalResults', '0'),
+                            'urls': article_urls
+                        }
+                    else:
+                        response = {
+                            'status': 'api_error',
+                            'query': query,
+                            'found': 0,
+                            'articles': [],
+                            'error': f'Google CSE API returned status {cse_response.status_code}',
+                            'sources_searched': [],
+                            'urls': []
+                        }
+                        
+                except Exception as e:
+                    response = {
+                        'status': 'search_error',
+                        'query': query,
+                        'found': 0,
+                        'articles': [],
+                        'error': f'Search failed: {str(e)}',
+                        'sources_searched': [],
+                        'urls': []
+                    }
+            else:
+                # Invalid query
+                response = {
+                    'status': 'invalid_query',
+                    'query': query,
+                    'found': 0,
+                    'articles': [],
+                    'sources_searched': [],
+                    'message': 'Query must be at least 2 characters',
+                    'urls': []
+                }
 
         except Exception as e:
-            # Catch any unexpected errors and return proper JSON response
-            print(f"Unexpected error in do_POST: {e}")
-            self.send_error_response(500, f'Internal server error: {str(e)}')
-
-    def search_illawarra_mercury(self, query, max_results=7):
-        try:
-            base_url = "https://www.illawarramercury.com.au"
-            search_url = f"{base_url}/search/?q={quote_plus(query)}"
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-
-            print(f"Searching URL: {search_url}")
-            response = requests.get(search_url, headers=headers, timeout=10)
-            response.raise_for_status()
-
-            soup = BeautifulSoup(response.content, 'html.parser')
-            article_links = []
-
-            # Look for article links
-            links = soup.select('a[href*="/story/"]')
-            print(f"Found {len(links)} potential article links")
-
-            for link in links:
-                title_text = link.get_text(strip=True)
-                href = link.get('href', '')
-                if href and isinstance(href, str) and '/story/' in href:
-                    # More flexible matching - check if any query word is in the title
-                    query_words = query.lower().split()
-                    if any(word in title_text.lower() for word in query_words):
-                        full_url = urljoin(base_url, href)
-                        if full_url not in article_links:
-                            article_links.append(full_url)
-                            print(f"Added article: {title_text[:50]}...")
-                            if len(article_links) >= max_results:
-                                break
-
-            print(f"Final result: {len(article_links)} articles found")
-            return article_links
-
-        except requests.exceptions.Timeout:
-            print(f"Timeout error while searching for: {query}")
-            return []
-        except requests.exceptions.ConnectionError:
-            print(f"Connection error while searching for: {query}")
-            return []
-        except requests.exceptions.HTTPError as e:
-            print(
-                f"HTTP error {e.response.status_code} while searching for: {query}")
-            return []
-        except Exception as e:
-            print(
-                f"Unexpected error in Illawarra Mercury search: {type(e).__name__}: {e}")
-            return []
-
-    def send_error_response(self, code, message):
-        try:
-            self.send_response(code)
+            self.send_response(500)
             self.send_header('Content-type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            error_response = {'error': message}
-            self.wfile.write(json.dumps(error_response).encode())
-        except Exception as e:
-            print(f"Failed to send error response: {e}")
-            try:
-                self.send_response(500)
-                self.send_header('Content-type', 'text/plain')
-                self.end_headers()
-                self.wfile.write(b'Internal server error')
-            except:
-                print(
-                    f"Critical error - unable to send any response: {message}")
+            
+            response = {
+                'status': 'server_error',
+                'error': str(e),
+                'found': 0,
+                'articles': [],
+                'urls': []
+            }
+
+        # Send the response
+        self.wfile.write(json.dumps(response).encode('utf-8'))
