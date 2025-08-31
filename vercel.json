@@ -3,17 +3,16 @@
   "builds": [
     {
       "src": "api/search.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "pythonVersion": "3.9"
+      }
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|ico|svg))",
-      "dest": "/$1"
+      "src": "/api/search",
+      "dest": "/api/search.py"
     },
     {
       "src": "/(.*)",
