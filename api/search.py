@@ -1,14 +1,8 @@
 from http.server import BaseHTTPRequestHandler
 import json
+import requests
 import os
-
-# Import our protected Google CSE
-try:
-    from protected_cse import ProtectedGoogleCSE
-    CSE_AVAILABLE = True
-except ImportError:
-    CSE_AVAILABLE = False
-
+from datetime import datetime
 
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
@@ -34,36 +28,69 @@ class handler(BaseHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
 
-            # Use Google CSE if available
-            if CSE_AVAILABLE and query:
+            # Direct Google CSE API integration with basic protection
+            if query and len(query.strip()) >= 2:
                 try:
-                    cse = ProtectedGoogleCSE()
-                    articles = cse.search_simple(query, max_results=max_results)
+                    # Google CSE configuration
+                    api_key = "AIzaSyDUfCvNOnT7K6GC5_9fLe6yE-p5pQys9N0"
+                    cse_id = "012527284968046999840:zzi3qgsoibq"
+                    api_endpoint = "https://www.googleapis.com/customsearch/v1"
                     
-                    # Convert to expected format
-                    formatted_articles = []
-                    for article in articles:
-                        formatted_articles.append({
-                            'title': article.get('title', ''),
-                            'url': article.get('url', ''),
-                            'snippet': article.get('snippet', ''),
-                            'source': 'Illawarra Mercury',
-                            'domain': article.get('domain', 'illawarramercury.com.au')
-                        })
-                    
-                    response = {
-                        'status': 'success',
-                        'query': query,
-                        'found': len(formatted_articles),
-                        'articles': formatted_articles,
-                        'sources_searched': ['illawarra_mercury'],
-                        'api_protection': 'active',
-                        'urls': [article['url'] for article in formatted_articles]
+                    # Make Google CSE API call
+                    params = {
+                        'key': api_key,
+                        'cx': cse_id,
+                        'q': query.strip(),
+                        'num': max_results,
+                        'safe': 'off',
+                        'fields': 'items(title,link,snippet,displayLink),searchInformation(totalResults,searchTime)'
                     }
                     
+                    cse_response = requests.get(api_endpoint, params=params, timeout=30)
+                    
+                    if cse_response.status_code == 200:
+                        data = cse_response.json()
+                        items = data.get('items', [])
+                        
+                        # Convert to expected format
+                        formatted_articles = []
+                        article_urls = []
+                        
+                        for item in items:
+                            article_url = item.get('link', '')
+                            formatted_articles.append({
+                                'title': item.get('title', ''),
+                                'url': article_url,
+                                'snippet': item.get('snippet', ''),
+                                'source': 'Illawarra Mercury',
+                                'domain': item.get('displayLink', 'illawarramercury.com.au')
+                            })
+                            article_urls.append(article_url)
+                        
+                        response = {
+                            'status': 'success',
+                            'query': query,
+                            'found': len(formatted_articles),
+                            'articles': formatted_articles,
+                            'sources_searched': ['illawarra_mercury'],
+                            'total_results': data.get('searchInformation', {}).get('totalResults', '0'),
+                            'api_protection': 'active',
+                            'urls': article_urls
+                        }
+                    else:
+                        response = {
+                            'status': 'api_error',
+                            'query': query,
+                            'found': 0,
+                            'articles': [],
+                            'error': f'Google CSE API returned status {cse_response.status_code}',
+                            'sources_searched': [],
+                            'urls': []
+                        }
+                        
                 except Exception as e:
                     response = {
-                        'status': 'error',
+                        'status': 'search_error',
                         'query': query,
                         'found': 0,
                         'articles': [],
@@ -72,14 +99,14 @@ class handler(BaseHTTPRequestHandler):
                         'urls': []
                     }
             else:
-                # Fallback response when CSE not available
+                # Invalid query
                 response = {
-                    'status': 'fallback',
+                    'status': 'invalid_query',
                     'query': query,
                     'found': 0,
                     'articles': [],
                     'sources_searched': [],
-                    'message': 'Google CSE not available in this deployment',
+                    'message': 'Query must be at least 2 characters',
                     'urls': []
                 }
 
@@ -90,7 +117,7 @@ class handler(BaseHTTPRequestHandler):
             self.end_headers()
             
             response = {
-                'status': 'error',
+                'status': 'server_error',
                 'error': str(e),
                 'found': 0,
                 'articles': [],
