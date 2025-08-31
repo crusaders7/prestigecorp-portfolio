@@ -1,28 +1,7 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/*.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
-  ],
   "functions": {
     "api/*.py": {
-      "runtime": "python3.8"
+      "runtime": "python3.9"
     }
-  },
-  "env": {
-    "GOOGLE_API_KEY": "@google_api_key",
-    "GOOGLE_CSE_ID": "@google_cse_id"
   }
 }
