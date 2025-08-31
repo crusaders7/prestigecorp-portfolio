@@ -10,7 +10,48 @@ Engine ID: 012527284968046999840
 Search Context: zzi3qgsoibq
 
 Additional configurations found:
-- vapidPublicKey: BMYlncSy9gevacGmVvRWjjOQdx77N528lsgT8sexk5Q9pzlDuNIjOANgEebvUgvgSeUCKM-VOPnO91qd06pFp0E=
+- def main():
+    import sys
+    
+    print("🔍 Google Custom Search Engine Integration")
+    print("Using discovered CSE configuration from illawarramercury.com.au")
+    print("=" * 70)
+    
+    # Create CSE manager with hardcoded API key
+    cse = GoogleCSEManager()
+    
+    # Check if search query provided as command line argument
+    if len(sys.argv) > 1:
+        query = sys.argv[1]
+        print("🚀 Running Google Custom Search")
+        print("=" * 60)
+        
+        # Search for the provided query directly
+        print(f"🔍 Searching for: '{query}'")
+        articles = cse.search_simple(query, max_results=10)
+        
+        if articles:
+            print(f"✅ Found {len(articles)} articles:")
+            for i, article in enumerate(articles, 1):
+                print(f"  {i}. {article['title']}")
+                print(f"     URL: {article['url']}")
+                print(f"     Snippet: {article['snippet'][:100]}...")
+                print()
+        else:
+            print(f"❌ No articles found for '{query}'")
+            # Try the full search method for more details
+            full_result = cse.search(query, num=10)
+            if full_result.get('success'):
+                total = full_result.get('total_results', '0')
+                print(f"📊 Total results available: {total}")
+            else:
+                print(f"🔧 Search error: {full_result.get('error', 'Unknown error')}")
+    else:
+        demonstration_mode()
+        
+        print("\n" + "="*70)
+        print("💡 To search with a query, run:")
+        print("   python google_cse_ready.py 'your search query'")ncSy9gevacGmVvRWjjOQdx77N528lsgT8sexk5Q9pzlDuNIjOANgEebvUgvgSeUCKM-VOPnO91qd06pFp0E=
 - appKey: CYcEg3i7SYSqDiZCGHZiRA
 - Google Analytics: UA-61683903-1
 - Google Optimize: OPT-T2NBD8D
@@ -47,7 +88,7 @@ class GoogleCSEManager:
         self.api_endpoint = "https://www.googleapis.com/customsearch/v1"
         
         # Set API key if provided, or use default
-        self.api_key = api_key or "YOUR_API_KEY_HERE"  # Replace with your actual API key
+        self.api_key = api_key or "AIzaSyDUfCvNOnT7K6GC5_9fLe6yE-p5pQys9N0"  # Replace with your actual API key
         
         # Additional discovered configurations
         self.discovered_config = {
@@ -188,15 +229,15 @@ class GoogleCSEManager:
                 "instructions": self.get_setup_instructions()
             }
         
-        # Test with a simple query
-        test_result = self.search("illawarra", num=1)
+        # Test with a simple query that should work
+        test_result = self.search("shellharbour", num=1)
         
         if test_result.get('success'):
             return {
                 "success": True,
                 "message": "API key is working correctly",
                 "cse_id": self.cse_id,
-                "test_query": "illawarra",
+                "test_query": "shellharbour",
                 "results_found": len(test_result.get('items', []))
             }
         else:
@@ -346,26 +387,48 @@ def api_key_mode(api_key: str):
             print(f"  {step}")
 
 def main():
-    """Main function - detect if API key is provided"""
+    """Main function - search with hardcoded API key"""
     import sys
     
     print("🔍 Google Custom Search Engine Integration")
     print("Using discovered CSE configuration from illawarramercury.com.au")
     print("=" * 70)
     
-    # Check if API key provided as command line argument
+    # Create CSE manager with hardcoded API key
+    cse = GoogleCSEManager()
+    
+    # Check if search query provided as command line argument
     if len(sys.argv) > 1:
-        api_key = sys.argv[1]
-        if api_key and api_key != "YOUR_API_KEY_HERE":
-            api_key_mode(api_key)
+        query = sys.argv[1]
+        print("🚀 Running Google Custom Search")
+        print("=" * 60)
+        
+        # Search for the provided query directly
+        print(f"🔍 Searching for: '{query}'")
+        articles = cse.search_simple(query, max_results=10)
+        
+        if articles:
+            print(f"✅ Found {len(articles)} articles:")
+            for i, article in enumerate(articles, 1):
+                print(f"  {i}. {article['title']}")
+                print(f"     URL: {article['url']}")
+                print(f"     Snippet: {article['snippet'][:100]}...")
+                print()
         else:
-            demonstration_mode()
+            print(f"❌ No articles found for '{query}'")
+            # Try the full search method for more details
+            full_result = cse.search(query, num=10)
+            if full_result.get('success'):
+                total = full_result.get('total_results', '0')
+                print(f"📊 Total results available: {total}")
+            else:
+                print(f"🔧 Search error: {full_result.get('error', 'Unknown error')}")
     else:
         demonstration_mode()
         
         print("\n" + "="*70)
-        print("💡 To test with an actual API key, run:")
-        print("   python google_cse_ready.py YOUR_API_KEY_HERE")
+        print("💡 To search with a query, run:")
+        print("   python google_cse_ready.py 'your search query'")
 
 if __name__ == "__main__":
     main()
