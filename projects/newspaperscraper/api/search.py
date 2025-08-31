@@ -190,17 +190,86 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             print(f"Site search failed: {e}")
         
-        # Strategy 2: Homepage and category scraping (always execute)
-        print(f"Proceeding to Strategy 2 (category scraping)...")
+        # Strategy 2: OPTIMIZED CATEGORY SCRAPING (Top performing categories prioritized)
+        # Based on comprehensive discovery - focus on highest-value categories first
+        print(f"Starting optimized category scraping with priority categories...")
         try:
-            category_urls = [
-                "https://www.illawarramercury.com.au",
-                "https://www.illawarramercury.com.au/news/",
-                "https://www.illawarramercury.com.au/sport/",
-                "https://www.illawarramercury.com.au/news/business/",
-                "https://www.illawarramercury.com.au/news/local-news/",
-                "https://www.illawarramercury.com.au/news/politics/"
+            # TIER 1: HIGHEST PRIORITY (100+ articles) - Best ROI for local content
+            tier1_categories = [
+                "https://www.illawarramercury.com.au/",  # Main page - 431 stories
+                "https://www.illawarramercury.com.au/sport/",  # 218 stories - highest category
+                "https://www.illawarramercury.com.au/entertainment/",  # 155 stories
+                "https://www.illawarramercury.com.au/news/",  # 125 stories
+                "https://www.illawarramercury.com.au/news/cost-of-living/",  # 124 stories - community interest
+                "https://www.illawarramercury.com.au/lifestyle/",  # 107 stories
             ]
+            
+            # TIER 2: HIGH PRIORITY (50-99 articles) - Strong content coverage
+            tier2_categories = [
+                "https://www.illawarramercury.com.au/sport/national-sport/",  # 96 stories
+                "https://www.illawarramercury.com.au/news/car-expert/",  # 83 stories
+                "https://www.illawarramercury.com.au/lifestyle/food-drink/",  # 83 stories
+                "https://www.illawarramercury.com.au/news/business/",  # 80 stories - council business
+                "https://www.illawarramercury.com.au/news/environment/",  # 80 stories - council environment
+                "https://www.illawarramercury.com.au/entertainment/technology/",  # 80 stories
+                "https://www.illawarramercury.com.au/entertainment/gaming/",  # 79 stories
+                "https://www.illawarramercury.com.au/news/local-news/your-news/",  # 78 stories - LOCAL focus
+                "https://www.illawarramercury.com.au/news/local-news/",  # 78 stories - LOCAL focus
+                "https://www.illawarramercury.com.au/lifestyle/home-garden/",  # 76 stories
+                "https://www.illawarramercury.com.au/news/local-news/babies-weddings-obituaries/",  # 76 stories
+                "https://www.illawarramercury.com.au/lifestyle/parenting/",  # 75 stories
+                "https://www.illawarramercury.com.au/news/local-news/history/",  # 74 stories
+                "https://www.illawarramercury.com.au/lifestyle/money/",  # 73 stories - rates/costs
+                "https://www.illawarramercury.com.au/sport/local-league/",  # 72 stories - local sports
+                "https://www.illawarramercury.com.au/sport/hawks-nest/",  # 72 stories
+                "https://www.illawarramercury.com.au/entertainment/movies/",  # 70 stories
+                "https://www.illawarramercury.com.au/sport/local-sport/",  # 70 stories - local sports
+                "https://www.illawarramercury.com.au/sport/dragons-den/",  # 68 stories
+                "https://www.illawarramercury.com.au/news/court-crime/",  # 66 stories - local issues
+                "https://www.illawarramercury.com.au/lifestyle/pets-animals/",  # 66 stories
+                "https://www.illawarramercury.com.au/lifestyle/health-wellbeing/",  # 63 stories
+                "https://www.illawarramercury.com.au/sport/junior-sport/",  # 62 stories
+                "https://www.illawarramercury.com.au/entertainment/books/",  # 61 stories
+                "https://www.illawarramercury.com.au/news/education/",  # 58 stories - schools/council
+                "https://www.illawarramercury.com.au/sport/toyota-hub/",  # 58 stories
+                "https://www.illawarramercury.com.au/news/health/",  # 56 stories - public health
+                "https://www.illawarramercury.com.au/news/national/",  # 54 stories
+                "https://www.illawarramercury.com.au/entertainment/arts-and-theatre/",  # 51 stories
+                "https://www.illawarramercury.com.au/lifestyle/food-drink/recipes/",  # 50 stories
+                "https://www.illawarramercury.com.au/entertainment/music/",  # 50 stories
+            ]
+            
+            # TIER 3: COMPREHENSIVE COVERAGE (20-49 articles) - Complete discovery results
+            tier3_categories = [
+                "https://www.illawarramercury.com.au/news/weather/",  # 46 stories
+                "https://www.illawarramercury.com.au/sport/a-league/",  # 46 stories
+                "https://www.illawarramercury.com.au/lifestyle/shopping/",  # 46 stories
+                "https://www.illawarramercury.com.au/news/nsw/",  # 44 stories
+                "https://www.illawarramercury.com.au/entertainment/tv-and-streaming/",  # 44 stories
+                "https://www.illawarramercury.com.au/sport/world/",  # 42 stories
+                "https://www.illawarramercury.com.au/news/how-many-more/",  # 41 stories
+                "https://www.illawarramercury.com.au/news/politics/",  # 40 stories - GOVERNMENT
+                "https://www.illawarramercury.com.au/news/world/",  # 40 stories
+                "https://www.illawarramercury.com.au/sport/cricket/",  # 37 stories
+                "https://www.illawarramercury.com.au/sport/afl/",  # 36 stories
+                "https://www.illawarramercury.com.au/sport/local-afl/",  # 36 stories
+                "https://www.illawarramercury.com.au/sport/nrl/",  # 36 stories
+                "https://www.illawarramercury.com.au/lifestyle/celebrity/",  # 36 stories
+                "https://www.illawarramercury.com.au/lifestyle/celebrity/royals/",  # 36 stories
+                "https://www.illawarramercury.com.au/lifestyle/fashion/",  # 36 stories
+                "https://www.illawarramercury.com.au/lifestyle/beauty/",  # 35 stories
+                "https://www.illawarramercury.com.au/sport/local-racing/",  # 28 stories
+                "https://www.illawarramercury.com.au/community/",  # 27 stories - community events
+                "https://www.illawarramercury.com.au/lifestyle/relationships/",  # 22 stories
+                "https://www.illawarramercury.com.au/lifestyle/relationships/dating/",  # 20 stories
+                # SPECIALIZED TIER (1-19 stories) - Niche but valuable content
+                "https://www.illawarramercury.com.au/lifestyle/food-drink/restaurants/",  # 8 stories
+                "https://www.illawarramercury.com.au/news/property/",  # 6 stories
+                "https://www.illawarramercury.com.au/entertainment/tv-streaming/tv-guide/",  # 6 stories
+            ]
+            
+            # Start with priority categories
+            category_urls = tier1_categories.copy()
             
             all_story_urls = []
             
@@ -231,11 +300,95 @@ class handler(BaseHTTPRequestHandler):
                     print(f"Failed to scrape category {category_url}: {e}")
                     continue
             
-            print(f"Found {len(all_story_urls)} total articles from categories")
+            print(f"Found {len(all_story_urls)} total articles from priority categories")
+            
+            # DYNAMIC EXPANSION: Add more categories if initial results are limited
+            relevant_found = 0
+            query_lower = query.lower()
+            query_words = [word.lower() for word in query.split() if len(word) > 2]
+            
+            # Quick relevance check on collected URLs
+            for story_url in all_story_urls[:50]:  # Check first 50 for speed
+                url_text = story_url.lower()
+                if any(word in url_text for word in query_words) or query_lower in url_text:
+                    relevant_found += 1
+            
+            print(f"Quick scan found {relevant_found} potentially relevant articles")
+            
+            # If we found fewer than 3 relevant URLs, add tier 2 categories
+            if relevant_found < 3:
+                print("Adding tier 2 categories for broader coverage...")
+                category_urls.extend(tier2_categories)
+                
+                # Scan tier 2 categories
+                for category_url in tier2_categories:
+                    try:
+                        category_headers = {
+                            'User-Agent': self.get_random_user_agent(),
+                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                            'Accept-Language': 'en-US,en;q=0.5',
+                            'Connection': 'keep-alive'
+                        }
+                        resp = requests.get(category_url, headers=category_headers, timeout=10)
+                        resp.raise_for_status()
+                        soup = BeautifulSoup(resp.content, 'lxml')
+                        
+                        tier2_count = 0
+                        for link in soup.find_all('a', href=True):
+                            href = link['href']
+                            if '/story/' in href:
+                                full_url = urljoin("https://www.illawarramercury.com.au", href)
+                                clean_url = full_url.split('#')[0].split('?')[0]
+                                if clean_url not in all_story_urls:
+                                    all_story_urls.append(clean_url)
+                                    tier2_count += 1
+                        
+                        print(f"  Added {tier2_count} articles from {category_url.split('/')[-2]}")
+                    
+                    except Exception as e:
+                        print(f"  Failed to scrape tier 2 category {category_url}: {e}")
+                        continue
+                
+                print(f"Total articles after tier 2: {len(all_story_urls)}")
+            
+            # If still limited results, add tier 3 for comprehensive coverage
+            if relevant_found < 2 and len(all_story_urls) < 200:
+                print("Adding tier 3 categories for comprehensive coverage...")
+                category_urls.extend(tier3_categories)
+                
+                for category_url in tier3_categories:
+                    try:
+                        category_headers = {
+                            'User-Agent': self.get_random_user_agent(),
+                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                            'Accept-Language': 'en-US,en;q=0.5',
+                            'Connection': 'keep-alive'
+                        }
+                        resp = requests.get(category_url, headers=category_headers, timeout=10)
+                        resp.raise_for_status()
+                        soup = BeautifulSoup(resp.content, 'lxml')
+                        
+                        tier3_count = 0
+                        for link in soup.find_all('a', href=True):
+                            href = link['href']
+                            if '/story/' in href:
+                                full_url = urljoin("https://www.illawarramercury.com.au", href)
+                                clean_url = full_url.split('#')[0].split('?')[0]
+                                if clean_url not in all_story_urls:
+                                    all_story_urls.append(clean_url)
+                                    tier3_count += 1
+                        
+                        print(f"  Added {tier3_count} articles from {category_url.split('/')[-2]}")
+                    
+                    except Exception:
+                        continue
+                
+                print(f"Final total articles: {len(all_story_urls)}")
+            
+            print(f"Proceeding with {len(all_story_urls)} articles for relevance analysis...")
             
             # Strategy 1a: URL keyword matching with scoring (enhanced for compound terms)
-            query_lower = query.lower()
-            query_words = [word.lower() for word in query.split() if len(word) > 2]  # Skip short words
+            # query_lower and query_words already defined above for dynamic expansion
             
             # Create variations for better matching
             query_variations = [
@@ -489,109 +642,12 @@ class handler(BaseHTTPRequestHandler):
                     seen_urls.update(broader_urls)
                     print(f"Strategy 2c (broader search) found {len(broader_urls)} additional articles")
             
-            print(f"Total articles after all Strategy 2 approaches: {len(urls)}")
-            print(f"Proceeding to Strategy 3 (Google search)...")
+            print(f"Enhanced category scraping completed: {len(urls)} articles found")
+            return urls[:max_results]
         
         except Exception as e:
-            print(f"Homepage scraping failed: {e}")
-            print(f"Proceeding to Strategy 3 (Google search)...")
-        
-        # Strategy 3: Enhanced Google search (can access full archive)
-        try:
-            # Try both quoted and unquoted searches for better coverage
-            search_queries = [
-                f'site:illawarramercury.com.au "{query}"',  # Exact phrase first
-                f'site:illawarramercury.com.au {query}',    # Individual words
-            ]
-            
-            google_results = []
-            for search_query in search_queries:
-                print(f"Trying Google search: {search_query}")
-                google_url = f"https://www.google.com/search?q={quote_plus(search_query)}&num=20"
-                
-                google_headers = {
-                    'User-Agent': self.get_random_user_agent(),
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Accept-Encoding': 'gzip, deflate, br',
-                    'Connection': 'keep-alive'
-                }
-                
-                resp = requests.get(google_url, headers=google_headers, timeout=12)
-                resp.raise_for_status()
-                soup = BeautifulSoup(resp.text, 'lxml')
-
-                found_in_this_search = 0
-                for link in soup.find_all('a'):
-                    href = link.get('href', '')
-                    if '/url?q=' in href:
-                        # Extract actual URL from Google redirect
-                        match = re.search(r'/url\?q=([^&]+)', href)
-                        if match:
-                            actual_url = unquote(match.group(1))
-                            if 'illawarramercury.com.au/story/' in actual_url:
-                                clean_url = actual_url.split('#')[0].split('?')[0]
-                                if clean_url not in seen_urls:
-                                    seen_urls.add(clean_url)
-                                    google_results.append(clean_url)
-                                    found_in_this_search += 1
-                                    if len(google_results) >= max_results:
-                                        break
-                
-                print(f"Found {found_in_this_search} new articles with this query")
-                if len(google_results) >= max_results:
-                    break
-                
-                time.sleep(1)  # Small delay between searches
-            
-            urls.extend(google_results)
-            print(f"Strategy 3 (Google search) found {len(google_results)} additional articles")
-            print(f"Total articles after Strategy 3: {len(urls)}")
-            print(f"Proceeding to Strategy 4 (DuckDuckGo search)...")
-
-        except Exception as e:
-            print(f"Google search failed: {e}")
-            print(f"Proceeding to Strategy 4 (DuckDuckGo search)...")
-        
-        # Strategy 4: Try DuckDuckGo as final fallback
-        try:
-            ddg_search_url = "https://html.duckduckgo.com/html/"
-            params = {'q': f'site:illawarramercury.com.au {query}'}
-            
-            ddg_headers = {
-                'User-Agent': self.get_random_user_agent(),
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Connection': 'keep-alive'
-            }
-            
-            resp = requests.get(ddg_search_url, headers=ddg_headers, params=params, timeout=10)
-            resp.raise_for_status()
-            soup = BeautifulSoup(resp.text, 'lxml')
-
-            ddg_results = []
-            for link in soup.find_all('a', class_='result__a'):
-                href = link.get('href')
-                if href:
-                    clean_url = unquote(href)
-                    match = re.search(r'uddg=([^&]+)', clean_url)
-                    if match:
-                        actual_url = unquote(match.group(1))
-                        if 'illawarramercury.com.au/story/' in actual_url and actual_url not in seen_urls:
-                            seen_urls.add(actual_url)
-                            ddg_results.append(actual_url)
-                            if len(ddg_results) >= max_results:
-                                break
-            
-            urls.extend(ddg_results)
-            print(f"Strategy 4 (DuckDuckGo search) found {len(ddg_results)} additional articles")
-
-        except Exception as e:
-            print(f"DuckDuckGo search failed: {e}")
-        
-        print(f"Final result: {len(urls)} relevant articles found across all strategies")
-        return urls[:max_results]
-
+            print(f"Enhanced category scraping failed: {e}")
+            return []
     def search_abc_news(self, query, max_results):
         """Searches ABC News for a given query."""
         try:

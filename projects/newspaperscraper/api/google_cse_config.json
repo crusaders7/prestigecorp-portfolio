@@ -1,0 +1,24 @@
+{
+  "google_custom_search": {
+    "cse_id": "012527284968046999840:zzi3qgsoibq",
+    "engine_id": "012527284968046999840",
+    "search_context": "zzi3qgsoibq",
+    "api_endpoint": "https://www.googleapis.com/customsearch/v1",
+    "api_key": "YOUR_API_KEY_HERE",
+    "discovered_from": "illawarramercury.com.au",
+    "discovery_date": "2025-08-31"
+  },
+  "usage_example": {
+    "python_code": "\n# Usage example:\nfrom google_cse_manager import GoogleCSEManager\n\n# Initialize with your API key\ncse = GoogleCSEManager(api_key=\"YOUR_API_KEY_HERE\")\n\n# Search for articles\nresults = cse.search_simple(\"shellharbour council\", max_results=10)\nfor article in results:\n    print(f\"Title: {article['title']}\")\n    print(f\"URL: {article['url']}\")\n    print(f\"Snippet: {article['snippet']}\")\n    print(\"-\" * 50)\n",
+    "curl_example": "\n# Direct API call example:\ncurl \"https://www.googleapis.com/customsearch/v1?key=YOUR_API_KEY&cx=012527284968046999840:zzi3qgsoibq&q=shellharbour\"\n"
+  },
+  "discovered_services": {
+    "vapidPublicKey": "BMYlncSy9gevacGmVvRWjjOQdx77N528lsgT8sexk5Q9pzlDuNIjOANgEebvUgvgSeUCKM-VOPnO91qd06pFp0E=",
+    "appKey": "CYcEg3i7SYSqDiZCGHZiRA",
+    "google_analytics": "UA-61683903-1",
+    "google_optimize_container": "OPT-T2NBD8D",
+    "mailchimp_ags_account": "f821a3c0f9ebb195a03cb86d4",
+    "brightcove_account": "3879528182001",
+    "brightcove_player": "cdO538E0l"
+  }
+}
