@@ -2,6 +2,7 @@
 """
 Google CSE News Search API - Vercel Serverless Function
 Powered by Google Custom Search Engine for reliable news results
+Updated: August 31, 2025 - Force fresh deployment
 """
 from http.server import BaseHTTPRequestHandler
 import json
