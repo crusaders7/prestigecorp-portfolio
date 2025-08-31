@@ -72,7 +72,7 @@ class handler(BaseHTTPRequestHandler):
             max_results = data.get('max_results', 10)
 
             if not query:
-                self.send_error_response(400, 'Query parameter is required')
+                self.send_error_response(400, 'UPDATED_API_v2: Query parameter is required')
                 return
 
             # Perform search
