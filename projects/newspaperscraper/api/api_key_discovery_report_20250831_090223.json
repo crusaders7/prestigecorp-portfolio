@@ -1,0 +1,30 @@
+{
+  "summary": {
+    "total_keys_discovered": 2,
+    "google_api_keys": 0,
+    "other_api_keys": 2,
+    "sources_scanned": 37,
+    "js_files_analyzed": 11
+  },
+  "source_breakdown": {
+    "inline_script": 2
+  },
+  "discovered_keys": [
+    {
+      "key": "UA",
+      "source": "inline_script",
+      "pattern_type": "google_analytics",
+      "context": "self.__next_f.push([1,\"4:[\\\"$\\\",\\\"$Ld\\\",null,{\\\"context\\\":{\\\"conf\\\":{\\\"brightcoveAccountId\\\":\\\"3879528182001\\\",\\\"brightcovePlayerId\\\":\\\"MvzwPMFVC\\\",\\\"brightcoveAdfreePlayerId\\\":\\\"acJAzgBUQ\\\",\\\"chartbe",
+      "discovered_at": "2025-08-31T09:01:53.096324"
+    },
+    {
+      "key": "g",
+      "source": "inline_script",
+      "pattern_type": "google_analytics",
+      "context": "self.__next_f.push([1,\"4:[\\\"$\\\",\\\"$Ld\\\",null,{\\\"context\\\":{\\\"conf\\\":{\\\"brightcoveAccountId\\\":\\\"3879528182001\\\",\\\"brightcovePlayerId\\\":\\\"MvzwPMFVC\\\",\\\"brightcoveAdfreePlayerId\\\":\\\"acJAzgBUQ\\\",\\\"chartbe",
+      "discovered_at": "2025-08-31T09:01:53.097291"
+    }
+  ],
+  "target_domain": "https://www.illawarramercury.com.au",
+  "cse_id_used": "012527284968046999840:zzi3qgsoibq"
+}

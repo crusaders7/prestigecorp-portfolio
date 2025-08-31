@@ -1,0 +1,14 @@
+[
+  {
+    "type": "cse_config",
+    "value": "012527284968046999840:zzi3qgsoibq",
+    "source": "network_test",
+    "timestamp": "2025-08-31T09:05:03.657932"
+  },
+  {
+    "type": "google_iframe",
+    "value": "https://www.googletagmanager.com/ns.html?id=GTM-KPMZ4JM",
+    "source": "Iframe source",
+    "timestamp": "2025-08-31T09:05:07.657340"
+  }
+]
