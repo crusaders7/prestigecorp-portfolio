@@ -47,46 +47,115 @@ class handler(BaseHTTPRequestHandler):
                     resp.raise_for_status()
                     soup = BeautifulSoup(resp.content, 'html.parser')
 
+                    # PRIORITY 1: Try JSON-LD structured data extraction for title
+                    json_ld_title = ''
+                    json_ld_date = ''
+                    try:
+                        # Find all JSON-LD script tags
+                        json_scripts = soup.find_all('script', type='application/ld+json')
+                        for script in json_scripts:
+                            try:
+                                json_data = json.loads(script.string or '')
+                                
+                                # Handle single object or array
+                                if isinstance(json_data, list):
+                                    json_data = json_data[0] if json_data else {}
+                                
+                                # Look for NewsArticle type
+                                if json_data.get('@type') == 'NewsArticle':
+                                    headline = json_data.get('headline', '')
+                                    if headline:
+                                        json_ld_title = headline
+                                    
+                                    # Try different date fields
+                                    date_published = (json_data.get('datePublished') or 
+                                                    json_data.get('dateCreated') or 
+                                                    json_data.get('dateModified'))
+                                    if date_published:
+                                        json_ld_date = date_published
+                                    
+                                    if headline:  # Found a NewsArticle with headline
+                                        break
+                            except json.JSONDecodeError:
+                                continue
+                    except Exception as e:
+                        print(f"Error parsing JSON-LD for title/date: {e}")
+                    
                     # Enhanced title extraction
                     title_text = ''
                     
-                    # Method 1: Try h1 elements
-                    h1_elements = soup.find_all('h1')
-                    for h1 in h1_elements:
-                        title_candidate = h1.get_text(strip=True)
-                        if title_candidate and len(title_candidate) > 10:
-                            title_text = title_candidate
-                            break
-                    
-                    # Method 2: Try meta title tags
-                    if not title_text:
-                        meta_title = soup.find('meta', attrs={'property': 'og:title'})
-                        if meta_title:
-                            title_text = meta_title.get('content', '')
-                        else:
-                            page_title = soup.find('title')
-                            if page_title:
-                                title_text = page_title.get_text(strip=True)
-                    
-                    # Method 3: Look for title in common classes
-                    if not title_text:
-                        title_selectors = [
-                            '.article-title',
-                            '.post-title',
-                            '.entry-title',
-                            '.story-title',
-                            '[class*="title"]'
-                        ]
+                    # PRIORITY 1: Use JSON-LD title if available
+                    if json_ld_title:
+                        title_text = json_ld_title
+                        print(f"Using JSON-LD title: {title_text[:100]}...")
+                    else:
+                        # Method 1: Try h1 elements
+                        h1_elements = soup.find_all('h1')
+                        for h1 in h1_elements:
+                            title_candidate = h1.get_text(strip=True)
+                            if title_candidate and len(title_candidate) > 10:
+                                title_text = title_candidate
+                                break
                         
-                        for selector in title_selectors:
-                            title_elem = soup.select_one(selector)
-                            if title_elem:
-                                title_candidate = title_elem.get_text(strip=True)
-                                if title_candidate and len(title_candidate) > 10:
-                                    title_text = title_candidate
-                                    break
+                        # Method 2: Try meta title tags
+                        if not title_text:
+                            meta_title = soup.find('meta', attrs={'property': 'og:title'})
+                            if meta_title:
+                                title_text = meta_title.get('content', '')
+                            else:
+                                page_title = soup.find('title')
+                                if page_title:
+                                    title_text = page_title.get_text(strip=True)
+                        
+                        # Method 3: Look for title in common classes
+                        if not title_text:
+                            title_selectors = [
+                                '.article-title',
+                                '.post-title',
+                                '.entry-title',
+                                '.story-title',
+                                '[class*="title"]'
+                            ]
+                            
+                            for selector in title_selectors:
+                                title_elem = soup.select_one(selector)
+                                if title_elem:
+                                    title_candidate = title_elem.get_text(strip=True)
+                                    if title_candidate and len(title_candidate) > 10:
+                                        title_text = title_candidate
+                                        break
 
-                    # Enhanced content selectors for better article extraction
+                    # PRIORITY 1: Try JSON-LD structured data extraction (for modern sites like Illawarra Mercury)
+                    json_ld_content = ''
+                    try:
+                        # Find all JSON-LD script tags
+                        json_scripts = soup.find_all('script', type='application/ld+json')
+                        for script in json_scripts:
+                            try:
+                                json_data = json.loads(script.string or '')
+                                
+                                # Handle single object or array
+                                if isinstance(json_data, list):
+                                    json_data = json_data[0] if json_data else {}
+                                
+                                # Look for NewsArticle type
+                                if json_data.get('@type') == 'NewsArticle':
+                                    article_body = json_data.get('articleBody', '')
+                                    if article_body and len(article_body) > 200:
+                                        json_ld_content = article_body
+                                        print(f"Found JSON-LD articleBody: {len(json_ld_content)} chars")
+                                        break
+                            except json.JSONDecodeError:
+                                continue
+                    except Exception as e:
+                        print(f"Error parsing JSON-LD: {e}")
+                    
+                    # If JSON-LD extraction was successful, use it
+                    if len(json_ld_content) > 200:
+                        content = json_ld_content
+                        content_found = True
+                        print(f"Using JSON-LD content: {len(content)} characters")
+                    else:
                     content_selectors = [
                         # Mercury-specific selectors
                         'div.story-body',
@@ -258,57 +327,62 @@ class handler(BaseHTTPRequestHandler):
                     # Enhanced date extraction
                     date_str = ''
                     
-                    # Method 1: Look for time elements with datetime attribute
-                    time_elements = soup.find_all('time')
-                    for time_elem in time_elements:
-                        if time_elem.get('datetime'):
-                            date_str = time_elem.get('datetime')
-                            break
-                        elif time_elem.get_text(strip=True):
-                            date_str = time_elem.get_text(strip=True)
-                            break
-                    
-                    # Method 2: Try various meta tags for date
-                    if not date_str:
-                        date_meta_selectors = [
-                            ('meta', {'name': 'pubdate'}),
-                            ('meta', {'property': 'article:published_time'}),
-                            ('meta', {'name': 'article:published_time'}),
-                            ('meta', {'property': 'article:published'}),
-                            ('meta', {'name': 'date'}),
-                            ('meta', {'property': 'og:updated_time'}),
-                            ('meta', {'name': 'created'}),
-                            ('meta', {'itemprop': 'datePublished'}),
-                            ('meta', {'itemprop': 'dateCreated'})
-                        ]
-                        
-                        for tag, attrs in date_meta_selectors:
-                            meta_tag = soup.find(tag, attrs=attrs)
-                            if meta_tag and meta_tag.get('content'):
-                                date_str = meta_tag.get('content')
+                    # PRIORITY 1: Use JSON-LD date if available
+                    if json_ld_date:
+                        date_str = json_ld_date
+                        print(f"Using JSON-LD date: {date_str}")
+                    else:
+                        # Method 1: Look for time elements with datetime attribute
+                        time_elements = soup.find_all('time')
+                        for time_elem in time_elements:
+                            if time_elem.get('datetime'):
+                                date_str = time_elem.get('datetime')
                                 break
-                    
-                    # Method 3: Look for date in common CSS classes
-                    if not date_str:
-                        date_selectors = [
-                            '.published-date',
-                            '.post-date', 
-                            '.article-date',
-                            '.entry-date',
-                            '.date',
-                            '.timestamp',
-                            '.publish-date',
-                            '[class*="date"]',
-                            '[class*="time"]'
-                        ]
+                            elif time_elem.get_text(strip=True):
+                                date_str = time_elem.get_text(strip=True)
+                                break
                         
-                        for selector in date_selectors:
-                            date_elem = soup.select_one(selector)
-                            if date_elem:
-                                date_text = date_elem.get_text(strip=True)
-                                if date_text and len(date_text) < 50:  # Reasonable date length
-                                    date_str = date_text
+                        # Method 2: Try various meta tags for date
+                        if not date_str:
+                            date_meta_selectors = [
+                                ('meta', {'name': 'pubdate'}),
+                                ('meta', {'property': 'article:published_time'}),
+                                ('meta', {'name': 'article:published_time'}),
+                                ('meta', {'property': 'article:published'}),
+                                ('meta', {'name': 'date'}),
+                                ('meta', {'property': 'og:updated_time'}),
+                                ('meta', {'name': 'created'}),
+                                ('meta', {'itemprop': 'datePublished'}),
+                                ('meta', {'itemprop': 'dateCreated'})
+                            ]
+                            
+                            for tag, attrs in date_meta_selectors:
+                                meta_tag = soup.find(tag, attrs=attrs)
+                                if meta_tag and meta_tag.get('content'):
+                                    date_str = meta_tag.get('content')
                                     break
+                        
+                        # Method 3: Look for date in common CSS classes
+                        if not date_str:
+                            date_selectors = [
+                                '.published-date',
+                                '.post-date', 
+                                '.article-date',
+                                '.entry-date',
+                                '.date',
+                                '.timestamp',
+                                '.publish-date',
+                                '[class*="date"]',
+                                '[class*="time"]'
+                            ]
+                            
+                            for selector in date_selectors:
+                                date_elem = soup.select_one(selector)
+                                if date_elem:
+                                    date_text = date_elem.get_text(strip=True)
+                                    if date_text and len(date_text) < 50:  # Reasonable date length
+                                        date_str = date_text
+                                        break
 
                     results.append({
                         'url': url,
