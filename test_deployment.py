@@ -3,7 +3,7 @@ import json
 
 def test_deployment():
     urls = [
-        'https://fresh-news-deployment-13ixk3lik-prestigecorp4s-projects.vercel.app/',
+        'https://fresh-news-deployment-1o1510p8e-prestigecorp4s-projects.vercel.app/',
         'https://fresh-news-deployment-prestigecorp4s-projects.vercel.app/',
         'https://news.prestigecorp.au/'
     ]
