@@ -47,88 +47,211 @@ class handler(BaseHTTPRequestHandler):
                     resp.raise_for_status()
                     soup = BeautifulSoup(resp.content, 'html.parser')
 
-                    title = soup.find('h1')
-                    date = soup.find('time')
+                    # Enhanced title extraction
+                    title_text = ''
+                    
+                    # Method 1: Try h1 elements
+                    h1_elements = soup.find_all('h1')
+                    for h1 in h1_elements:
+                        title_candidate = h1.get_text(strip=True)
+                        if title_candidate and len(title_candidate) > 10:
+                            title_text = title_candidate
+                            break
+                    
+                    # Method 2: Try meta title tags
+                    if not title_text:
+                        meta_title = soup.find('meta', attrs={'property': 'og:title'})
+                        if meta_title:
+                            title_text = meta_title.get('content', '')
+                        else:
+                            page_title = soup.find('title')
+                            if page_title:
+                                title_text = page_title.get_text(strip=True)
+                    
+                    # Method 3: Look for title in common classes
+                    if not title_text:
+                        title_selectors = [
+                            '.article-title',
+                            '.post-title',
+                            '.entry-title',
+                            '.story-title',
+                            '[class*="title"]'
+                        ]
+                        
+                        for selector in title_selectors:
+                            title_elem = soup.select_one(selector)
+                            if title_elem:
+                                title_candidate = title_elem.get_text(strip=True)
+                                if title_candidate and len(title_candidate) > 10:
+                                    title_text = title_candidate
+                                    break
 
-                    # Try to get article content
+                    # Enhanced content selectors for better article extraction
                     content_selectors = [
                         'div.article-content',
-                        'div.story-content',
+                        'div.story-content', 
                         'div.entry-content',
-                        'article',
                         'div.post-content',
                         'div.content',
                         'div.article-body',
-                        'div.story-body'
+                        'div.story-body',
+                        'div.field-item',
+                        'div.node-content',
+                        'div.article-text',
+                        'div.content-body',
+                        'div.main-content',
+                        'section.article-body',
+                        'section.story-body',
+                        'article .content',
+                        'article main',
+                        '.article-wrapper',
+                        '.story-wrapper',
+                        '.post-body',
+                        '.entry-body',
+                        'main article',
+                        '[class*="article-content"]',
+                        '[class*="story-content"]',
+                        '[class*="post-content"]'
                     ]
 
                     content = ''
+                    content_found = False
+                    
+                    # Try each selector until we find substantial content
                     for selector in content_selectors:
-                        content_div = soup.select_one(selector)
-                        if content_div:
-                            # Get all paragraphs and divs with text content
-                            elements = content_div.find_all(
-                                ['p', 'h2', 'h3', 'div', 'span'], recursive=False)
-                            content_parts = []
+                        try:
+                            content_div = soup.select_one(selector)
+                            if content_div:
+                                # Method 1: Get all text content recursively
+                                full_text = content_div.get_text(separator='\n', strip=True)
+                                
+                                # Method 2: Get paragraphs specifically
+                                paragraphs = content_div.find_all(['p', 'div'], recursive=True)
+                                paragraph_texts = []
+                                
+                                for p in paragraphs:
+                                    # Skip elements with no text or very short text
+                                    text = p.get_text(strip=True)
+                                    if text and len(text) > 30:
+                                        # Skip navigation, ads, etc.
+                                        if not any(skip_word in text.lower() for skip_word in 
+                                                 ['subscribe', 'advertisement', 'click here', 'read more', 'share this', 'follow us']):
+                                            paragraph_texts.append(text)
+                                
+                                # Use the method that gives us more substantial content
+                                if len(full_text) > len(' '.join(paragraph_texts)):
+                                    content = full_text
+                                else:
+                                    content = ' '.join(paragraph_texts)
+                                
+                                # If we found substantial content (more than 200 chars), use it
+                                if len(content) > 200:
+                                    print(f"Found content using selector: {selector} ({len(content)} chars)")
+                                    content_found = True
+                                    break
+                        except Exception as selector_error:
+                            print(f"Error with selector {selector}: {selector_error}")
+                            continue
 
-                            for elem in elements:
-                                # Skip empty elements
-                                text = elem.get_text(strip=True)
-                                if text and len(text) > 20:  # Skip very short elements
-                                    content_parts.append(text)
-
-                            content = ' '.join(content_parts)
-                            print(f"Found content using selector: {selector}")
-                            break
-
-                    # Fallback to meta description if no content found
-                    if not content:
-                        preview = soup.find(
-                            'meta', attrs={'name': 'description'})
-                        if preview:
-                            try:
-                                content = preview.get('content', '')
-                            except (AttributeError, TypeError):
-                                content = ''
-                        else:
-                            paragraphs = soup.find_all('p')[:3]
-                            content = ' '.join(
-                                [p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True)])
+                    # Enhanced fallback methods if no content found
+                    if not content_found or len(content) < 100:
+                        print("Using fallback content extraction methods")
+                        
+                        # Fallback 1: Try to find main content area
+                        main_areas = soup.find_all(['main', 'article', '[role="main"]'])
+                        for main_area in main_areas:
+                            paragraphs = main_area.find_all('p')
+                            if len(paragraphs) >= 3:
+                                fallback_content = ' '.join([p.get_text(strip=True) for p in paragraphs[:10]])
+                                if len(fallback_content) > len(content):
+                                    content = fallback_content
+                                    break
+                        
+                        # Fallback 2: Get all paragraphs from the entire page
+                        if len(content) < 100:
+                            all_paragraphs = soup.find_all('p')
+                            good_paragraphs = []
+                            for p in all_paragraphs:
+                                text = p.get_text(strip=True)
+                                if len(text) > 50 and not any(skip in text.lower() for skip in 
+                                                            ['cookie', 'subscribe', 'newsletter', 'advertisement']):
+                                    good_paragraphs.append(text)
+                                if len(good_paragraphs) >= 8:  # Limit to avoid too much content
+                                    break
+                            if good_paragraphs:
+                                content = ' '.join(good_paragraphs)
+                        
+                        # Fallback 3: Meta description as last resort
+                        if len(content) < 50:
+                            meta_desc = soup.find('meta', attrs={'name': 'description'})
+                            if meta_desc:
+                                content = meta_desc.get('content', '')
 
                     # Ensure content is a string
                     if not isinstance(content, str):
                         content = str(content)
 
-                    # Get date safely
+                    # Enhanced date extraction
                     date_str = ''
-                    if date:
-                        try:
-                            # Try to get datetime attribute first
-                            date_str = date.get('datetime', '')
-
-                            # If no datetime, get text content
-                            if not date_str:
-                                date_str = date.get_text(strip=True)
-                        except (AttributeError, TypeError):
-                            date_str = ''
-
-                    # If no date found in time tag, try meta tags
+                    
+                    # Method 1: Look for time elements with datetime attribute
+                    time_elements = soup.find_all('time')
+                    for time_elem in time_elements:
+                        if time_elem.get('datetime'):
+                            date_str = time_elem.get('datetime')
+                            break
+                        elif time_elem.get_text(strip=True):
+                            date_str = time_elem.get_text(strip=True)
+                            break
+                    
+                    # Method 2: Try various meta tags for date
                     if not date_str:
-                        date_meta = soup.find(
-                            'meta', attrs={'name': 'pubdate'})
-                        if date_meta:
-                            date_str = date_meta.get('content', '')
-                        else:
-                            date_meta = soup.find(
-                                'meta', attrs={'property': 'article:published_time'})
-                            if date_meta:
-                                date_str = date_meta.get('content', '')
+                        date_meta_selectors = [
+                            ('meta', {'name': 'pubdate'}),
+                            ('meta', {'property': 'article:published_time'}),
+                            ('meta', {'name': 'article:published_time'}),
+                            ('meta', {'property': 'article:published'}),
+                            ('meta', {'name': 'date'}),
+                            ('meta', {'property': 'og:updated_time'}),
+                            ('meta', {'name': 'created'}),
+                            ('meta', {'itemprop': 'datePublished'}),
+                            ('meta', {'itemprop': 'dateCreated'})
+                        ]
+                        
+                        for tag, attrs in date_meta_selectors:
+                            meta_tag = soup.find(tag, attrs=attrs)
+                            if meta_tag and meta_tag.get('content'):
+                                date_str = meta_tag.get('content')
+                                break
+                    
+                    # Method 3: Look for date in common CSS classes
+                    if not date_str:
+                        date_selectors = [
+                            '.published-date',
+                            '.post-date', 
+                            '.article-date',
+                            '.entry-date',
+                            '.date',
+                            '.timestamp',
+                            '.publish-date',
+                            '[class*="date"]',
+                            '[class*="time"]'
+                        ]
+                        
+                        for selector in date_selectors:
+                            date_elem = soup.select_one(selector)
+                            if date_elem:
+                                date_text = date_elem.get_text(strip=True)
+                                if date_text and len(date_text) < 50:  # Reasonable date length
+                                    date_str = date_text
+                                    break
 
                     results.append({
                         'url': url,
-                        'title': title.get_text(strip=True) if title else 'No title found',
+                        'title': title_text if title_text else 'No title found',
                         'date': date_str,
-                        'content': content[:2000] + '...' if len(content) > 2000 else content
+                        'content': content,  # Return full content without truncation
+                        'content_length': len(content)  # Add content length for reference
                     })
                     scraped_count += 1
 

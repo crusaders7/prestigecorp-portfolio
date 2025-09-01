@@ -559,16 +559,36 @@
 
             articlesList.innerHTML = scrapedArticles.map((article, index) => `
                 <div class="article-card">
-                    <div class="flex justify-between items-start">
-                        <h4 class="font-semibold text-white mb-2 flex-1">${article.title}</h4>
+                    <div class="flex justify-between items-start mb-3">
+                        <h4 class="font-semibold text-white mb-2 flex-1 text-lg">${article.title}</h4>
                         <a href="${article.url}" target="_blank" class="ml-4 text-indigo-400 text-sm hover:underline whitespace-nowrap">View Original →</a>
                     </div>
-                    <p class="text-gray-400 text-sm mb-2 cursor-pointer" onclick="toggleArticle(${index})">
-                        ${article.date ? `Date: ${article.date} | ` : ''}
-                        Click to expand/collapse article preview
-                    </p>
-                    <div id="article-content-${index}" class="hidden mt-4 text-gray-300 text-sm prose prose-invert max-w-none">
-                        ${article.content}
+                    <div class="mb-3 text-sm text-gray-400">
+                        ${article.date ? `📅 Published: ${article.date}` : ''}
+                        ${article.content_length ? ` | 📄 Content: ${article.content_length} characters` : ''}
+                    </div>
+                    <div class="mb-3">
+                        <button 
+                            onclick="toggleArticle(${index})" 
+                            class="text-indigo-400 hover:text-indigo-300 text-sm font-medium focus:outline-none"
+                            id="toggle-btn-${index}"
+                        >
+                            📖 Click to read full article
+                        </button>
+                    </div>
+                    <div id="article-content-${index}" class="hidden mt-4 p-4 bg-gray-900/30 rounded-lg border border-gray-700">
+                        <div class="text-gray-200 leading-relaxed whitespace-pre-wrap" style="line-height: 1.6;">
+                            ${article.content.replace(/\n\s*\n/g, '\n\n').replace(/\n/g, '\n\n')}
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-gray-700">
+                            <a href="${article.url}" target="_blank" 
+                               class="inline-flex items-center text-indigo-400 hover:text-indigo-300 text-sm">
+                                🔗 Read original article
+                                <svg class="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                                </svg>
+                            </a>
+                        </div>
                     </div>
                 </div>
             `).join('');
@@ -578,7 +598,19 @@
 
         function toggleArticle(index) {
             const contentDiv = document.getElementById(`article-content-${index}`);
-            contentDiv.classList.toggle('hidden');
+            const toggleBtn = document.getElementById(`toggle-btn-${index}`);
+            
+            if (contentDiv.classList.contains('hidden')) {
+                contentDiv.classList.remove('hidden');
+                toggleBtn.innerHTML = '📚 Hide full article';
+                toggleBtn.classList.add('text-yellow-400');
+                toggleBtn.classList.remove('text-indigo-400');
+            } else {
+                contentDiv.classList.add('hidden');
+                toggleBtn.innerHTML = '📖 Click to read full article';
+                toggleBtn.classList.add('text-indigo-400');
+                toggleBtn.classList.remove('text-yellow-400');
+            }
         }
 
         async function downloadArticles(format) {

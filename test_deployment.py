@@ -1,23 +1,32 @@
 import requests
 import json
 
-# Test the API again to see if it's updated
-response = requests.post('https://news.prestigecorp.au/api/search', 
-                        json={'query': 'test deployment check'})
+def test_deployment():
+    urls = [
+        'https://fresh-news-deployment-13ixk3lik-prestigecorp4s-projects.vercel.app/',
+        'https://fresh-news-deployment-prestigecorp4s-projects.vercel.app/',
+        'https://news.prestigecorp.au/'
+    ]
+    
+    for url in urls:
+        try:
+            print(f"\nTesting: {url}")
+            response = requests.get(url, timeout=10)
+            print(f"Status Code: {response.status_code}")
+            print(f"Headers: {dict(response.headers)}")
+            if response.status_code == 200:
+                print("✅ SUCCESS - Application is working!")
+                print(f"Content length: {len(response.text)}")
+                if response.text:
+                    print(f"First 200 chars: {response.text[:200]}")
+            else:
+                print(f"❌ ERROR - Status: {response.status_code}")
+                print(f"Response: {response.text[:500]}")
+                
+        except requests.exceptions.RequestException as e:
+            print(f"❌ REQUEST ERROR: {e}")
+        except Exception as e:
+            print(f"❌ UNEXPECTED ERROR: {e}")
 
-print(f'Status: {response.status_code}')
-result = response.json()
-print('Response keys:', list(result.keys()))
-
-# Check for specific Google CSE implementation markers
-if 'cost_estimate' in result:
-    print('SUCCESS: Google CSE implementation is now deployed!')
-elif 'timestamp' in result:
-    print('DETECTED: Implementation with timestamp field')
-elif 'error' in result:
-    print(f'ERROR: {result["error"]}')
-else:
-    print('DETECTED: Still using old implementation')
-
-print('Sample response:')
-print(json.dumps(result, indent=2))
+if __name__ == "__main__":
+    test_deployment()
