@@ -156,169 +156,170 @@ class handler(BaseHTTPRequestHandler):
                         content_found = True
                         print(f"Using JSON-LD content: {len(content)} characters")
                     else:
-                    content_selectors = [
-                        # Mercury-specific selectors
-                        'div.story-body',
-                        'div.story-content', 
-                        'div.article-body',
-                        'div.article-content',
-                        'div.body-text',
-                        'div.field-name-body',
-                        'div.field-type-text-with-summary',
-                        'div[data-module="ArticleBody"]',
-                        'div.node-article div.content',
-                        'section.article-body',
-                        
-                        # Common article selectors
-                        'div.entry-content',
-                        'div.post-content',
-                        'div.content',
-                        'div.article-text',
-                        'div.content-body',
-                        'div.main-content',
-                        'section.story-body',
-                        'article .content',
-                        'article main',
-                        'article div.body',
-                        '.article-wrapper .content',
-                        '.story-wrapper .body',
-                        '.post-body',
-                        '.entry-body',
-                        'main article',
-                        
-                        # Generic selectors
-                        '[class*="article-content"]',
-                        '[class*="story-content"]',
-                        '[class*="post-content"]',
-                        '[class*="body-content"]',
-                        '[class*="article-body"]',
-                        '[class*="story-body"]',
-                        
-                        # Fallback to article tag
-                        'article'
-                    ]
+                        # Enhanced content selectors for better article extraction
+                        content_selectors = [
+                            # Mercury-specific selectors
+                            'div.story-body',
+                            'div.story-content', 
+                            'div.article-body',
+                            'div.article-content',
+                            'div.body-text',
+                            'div.field-name-body',
+                            'div.field-type-text-with-summary',
+                            'div[data-module="ArticleBody"]',
+                            'div.node-article div.content',
+                            'section.article-body',
+                            
+                            # Common article selectors
+                            'div.entry-content',
+                            'div.post-content',
+                            'div.content',
+                            'div.article-text',
+                            'div.content-body',
+                            'div.main-content',
+                            'section.story-body',
+                            'article .content',
+                            'article main',
+                            'article div.body',
+                            '.article-wrapper .content',
+                            '.story-wrapper .body',
+                            '.post-body',
+                            '.entry-body',
+                            'main article',
+                            
+                            # Generic selectors
+                            '[class*="article-content"]',
+                            '[class*="story-content"]',
+                            '[class*="post-content"]',
+                            '[class*="body-content"]',
+                            '[class*="article-body"]',
+                            '[class*="story-body"]',
+                            
+                            # Fallback to article tag
+                            'article'
+                        ]
 
-                    content = ''
-                    content_found = False
-                    
-                    # Try each selector until we find substantial content
-                    for selector in content_selectors:
-                        try:
-                            content_div = soup.select_one(selector)
-                            if content_div:
-                                # Method 1: Extract text from paragraphs only
-                                paragraphs = content_div.find_all('p')
-                                paragraph_texts = []
-                                
-                                for p in paragraphs:
-                                    text = p.get_text(strip=True)
-                                    # Skip subscription notices, ads, and navigation
-                                    if (text and len(text) > 50 and 
-                                        not any(skip_word in text.lower() for skip_word in [
-                                            'your digital subscription', 'access unlimited content',
-                                            'today\'s paper', 'subscribe', 'subscription', 'sign up',
-                                            'newsletter', 'follow us', 'share this', 'read more',
-                                            'click here', 'advertisement', 'sponsored', 'related articles',
-                                            'more stories', 'breaking news', 'latest news', 'trending'
-                                        ])):
-                                        paragraph_texts.append(text)
-                                
-                                if paragraph_texts:
-                                    content = ' '.join(paragraph_texts)
+                        content = ''
+                        content_found = False
+                        
+                        # Try each selector until we find substantial content
+                        for selector in content_selectors:
+                            try:
+                                content_div = soup.select_one(selector)
+                                if content_div:
+                                    # Method 1: Extract text from paragraphs only
+                                    paragraphs = content_div.find_all('p')
+                                    paragraph_texts = []
                                     
-                                # Method 2: If paragraphs don't give enough, try all text
-                                if len(content) < 200:
-                                    # Remove unwanted elements first
-                                    for unwanted in content_div.find_all(['script', 'style', 'nav', 'header', 'footer', 'aside', 'form']):
-                                        unwanted.decompose()
-                                    
-                                    # Remove subscription boxes
-                                    for sub_box in content_div.find_all(attrs={'class': lambda x: x and any(word in ' '.join(x).lower() for word in ['subscribe', 'subscription', 'paywall', 'premium'])}):
-                                        sub_box.decompose()
-                                    
-                                    full_text = content_div.get_text(separator=' ', strip=True)
-                                    
-                                    # Clean up the text
-                                    lines = full_text.split('.')
-                                    clean_lines = []
-                                    
-                                    for line in lines:
-                                        line = line.strip()
-                                        if (len(line) > 30 and 
-                                            not any(skip in line.lower() for skip in [
-                                                'digital subscription', 'unlimited content', 'today\'s paper',
-                                                'subscribe', 'newsletter', 'breaking news', 'latest news'
+                                    for p in paragraphs:
+                                        text = p.get_text(strip=True)
+                                        # Skip subscription notices, ads, and navigation
+                                        if (text and len(text) > 50 and 
+                                            not any(skip_word in text.lower() for skip_word in [
+                                                'your digital subscription', 'access unlimited content',
+                                                'today\'s paper', 'subscribe', 'subscription', 'sign up',
+                                                'newsletter', 'follow us', 'share this', 'read more',
+                                                'click here', 'advertisement', 'sponsored', 'related articles',
+                                                'more stories', 'breaking news', 'latest news', 'trending'
                                             ])):
-                                            clean_lines.append(line)
+                                            paragraph_texts.append(text)
                                     
-                                    if clean_lines and len(' '.join(clean_lines)) > len(content):
-                                        content = '. '.join(clean_lines)
-                                
-                                # If we found substantial content (more than 300 chars), use it
-                                if len(content) > 300:
-                                    print(f"Found content using selector: {selector} ({len(content)} chars)")
-                                    content_found = True
-                                    break
-                                elif len(content) > 100:
-                                    print(f"Found partial content using selector: {selector} ({len(content)} chars)")
-                                    # Continue looking but keep this as backup
+                                    if paragraph_texts:
+                                        content = ' '.join(paragraph_texts)
+                                        
+                                    # Method 2: If paragraphs don't give enough, try all text
+                                    if len(content) < 200:
+                                        # Remove unwanted elements first
+                                        for unwanted in content_div.find_all(['script', 'style', 'nav', 'header', 'footer', 'aside', 'form']):
+                                            unwanted.decompose()
+                                        
+                                        # Remove subscription boxes
+                                        for sub_box in content_div.find_all(attrs={'class': lambda x: x and any(word in ' '.join(x).lower() for word in ['subscribe', 'subscription', 'paywall', 'premium'])}):
+                                            sub_box.decompose()
+                                        
+                                        full_text = content_div.get_text(separator=' ', strip=True)
+                                        
+                                        # Clean up the text
+                                        lines = full_text.split('.')
+                                        clean_lines = []
+                                        
+                                        for line in lines:
+                                            line = line.strip()
+                                            if (len(line) > 30 and 
+                                                not any(skip in line.lower() for skip in [
+                                                    'digital subscription', 'unlimited content', 'today\'s paper',
+                                                    'subscribe', 'newsletter', 'breaking news', 'latest news'
+                                                ])):
+                                                clean_lines.append(line)
+                                        
+                                        if clean_lines and len(' '.join(clean_lines)) > len(content):
+                                            content = '. '.join(clean_lines)
                                     
-                        except Exception as selector_error:
-                            print(f"Error with selector {selector}: {selector_error}")
-                            continue
+                                    # If we found substantial content (more than 300 chars), use it
+                                    if len(content) > 300:
+                                        print(f"Found content using selector: {selector} ({len(content)} chars)")
+                                        content_found = True
+                                        break
+                                    elif len(content) > 100:
+                                        print(f"Found partial content using selector: {selector} ({len(content)} chars)")
+                                        # Continue looking but keep this as backup
+                                        
+                            except Exception as selector_error:
+                                print(f"Error with selector {selector}: {selector_error}")
+                                continue
 
-                    # Enhanced fallback methods if no content found
-                    if not content_found or len(content) < 200:
-                        print("Using enhanced fallback content extraction methods")
-                        
-                        # Fallback 1: Look for any div with substantial paragraph content
-                        all_divs = soup.find_all('div')
-                        best_content = ''
-                        
-                        for div in all_divs:
-                            div_paragraphs = div.find_all('p', recursive=False)
-                            if len(div_paragraphs) >= 3:  # At least 3 paragraphs
-                                div_text = ' '.join([p.get_text(strip=True) for p in div_paragraphs[:8]])
-                                # Skip if it contains subscription text
-                                if (len(div_text) > 500 and 
-                                    'digital subscription' not in div_text.lower() and
-                                    'unlimited content' not in div_text.lower()):
-                                    if len(div_text) > len(best_content):
-                                        best_content = div_text
-                        
-                        if len(best_content) > len(content):
-                            content = best_content
-                            print(f"Used div fallback: {len(content)} chars")
-                        
-                        # Fallback 2: Get all paragraphs from the entire page (more selective)
-                        if len(content) < 200:
-                            all_paragraphs = soup.find_all('p')
-                            good_paragraphs = []
+                        # Enhanced fallback methods if no content found
+                        if not content_found or len(content) < 200:
+                            print("Using enhanced fallback content extraction methods")
                             
-                            for p in all_paragraphs:
-                                text = p.get_text(strip=True)
-                                if (len(text) > 80 and  # Longer minimum
-                                    not any(skip in text.lower() for skip in [
-                                        'cookie', 'subscribe', 'newsletter', 'advertisement',
-                                        'digital subscription', 'unlimited content', 'today\'s paper',
-                                        'follow us', 'share this', 'latest news', 'breaking news'
-                                    ])):
-                                    good_paragraphs.append(text)
-                                if len(good_paragraphs) >= 6:  # Limit to avoid too much content
-                                    break
+                            # Fallback 1: Look for any div with substantial paragraph content
+                            all_divs = soup.find_all('div')
+                            best_content = ''
                             
-                            if good_paragraphs:
-                                fallback_content = ' '.join(good_paragraphs)
-                                if len(fallback_content) > len(content):
-                                    content = fallback_content
-                                    print(f"Used paragraph fallback: {len(content)} chars")
-                        
-                        # Fallback 3: Meta description as last resort
-                        if len(content) < 100:
-                            meta_desc = soup.find('meta', attrs={'name': 'description'})
-                            if meta_desc:
-                                content = meta_desc.get('content', '')
-                                print(f"Used meta description: {len(content)} chars")
+                            for div in all_divs:
+                                div_paragraphs = div.find_all('p', recursive=False)
+                                if len(div_paragraphs) >= 3:  # At least 3 paragraphs
+                                    div_text = ' '.join([p.get_text(strip=True) for p in div_paragraphs[:8]])
+                                    # Skip if it contains subscription text
+                                    if (len(div_text) > 500 and 
+                                        'digital subscription' not in div_text.lower() and
+                                        'unlimited content' not in div_text.lower()):
+                                        if len(div_text) > len(best_content):
+                                            best_content = div_text
+                            
+                            if len(best_content) > len(content):
+                                content = best_content
+                                print(f"Used div fallback: {len(content)} chars")
+                            
+                            # Fallback 2: Get all paragraphs from the entire page (more selective)
+                            if len(content) < 200:
+                                all_paragraphs = soup.find_all('p')
+                                good_paragraphs = []
+                                
+                                for p in all_paragraphs:
+                                    text = p.get_text(strip=True)
+                                    if (len(text) > 80 and  # Longer minimum
+                                        not any(skip in text.lower() for skip in [
+                                            'cookie', 'subscribe', 'newsletter', 'advertisement',
+                                            'digital subscription', 'unlimited content', 'today\'s paper',
+                                            'follow us', 'share this', 'latest news', 'breaking news'
+                                        ])):
+                                        good_paragraphs.append(text)
+                                    if len(good_paragraphs) >= 6:  # Limit to avoid too much content
+                                        break
+                                
+                                if good_paragraphs:
+                                    fallback_content = ' '.join(good_paragraphs)
+                                    if len(fallback_content) > len(content):
+                                        content = fallback_content
+                                        print(f"Used paragraph fallback: {len(content)} chars")
+                            
+                            # Fallback 3: Meta description as last resort
+                            if len(content) < 100:
+                                meta_desc = soup.find('meta', attrs={'name': 'description'})
+                                if meta_desc:
+                                    content = meta_desc.get('content', '')
+                                    print(f"Used meta description: {len(content)} chars")
 
                     # Ensure content is a string
                     if not isinstance(content, str):
