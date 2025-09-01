@@ -24,8 +24,9 @@ try:
 except ImportError:
     PROTECTION_AVAILABLE = False
 
+
 class handler(BaseHTTPRequestHandler):
-    
+
     def do_OPTIONS(self):
         """Handle CORS preflight requests"""
         self.send_response(200)
@@ -40,7 +41,7 @@ class handler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', 'text/html')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
-        
+
         response = """
         <h1>Error response</h1>
         <p>Error code: 501</p>
@@ -59,7 +60,7 @@ class handler(BaseHTTPRequestHandler):
                 return
 
             post_data = self.rfile.read(content_length)
-            
+
             try:
                 data = json.loads(post_data.decode('utf-8'))
             except (json.JSONDecodeError, UnicodeDecodeError) as e:
@@ -72,18 +73,19 @@ class handler(BaseHTTPRequestHandler):
             max_results = data.get('max_results', 10)
 
             if not query:
-                self.send_error_response(400, 'UPDATED_API_v2: Query parameter is required')
+                self.send_error_response(
+                    400, 'UPDATED_API_v2: Query parameter is required')
                 return
 
             # Perform search
             search_results = self.search_news(query, sources, max_results)
-            
+
             # Send response
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            
+
             response = json.dumps(search_results, indent=2, ensure_ascii=False)
             self.wfile.write(response.encode('utf-8'))
 
@@ -92,7 +94,7 @@ class handler(BaseHTTPRequestHandler):
 
     def search_news(self, query, sources, max_results):
         """Search for news using Google Custom Search Engine"""
-        
+
         # Check if Google CSE is available
         if not GOOGLE_AVAILABLE:
             return {
@@ -108,7 +110,7 @@ class handler(BaseHTTPRequestHandler):
         # Get API credentials from environment
         api_key = os.environ.get('GOOGLE_API_KEY')
         cse_id = os.environ.get('GOOGLE_CSE_ID')
-        
+
         if not api_key or not cse_id:
             return {
                 'query': query,
@@ -123,19 +125,29 @@ class handler(BaseHTTPRequestHandler):
         try:
             # Use protection if available
             if PROTECTION_AVAILABLE:
-                protected_cse = ProtectedGoogleCSE(api_key, cse_id)
-                results = protected_cse.search(query, num_results=max_results)
-                if results.get('error'):
+                protected_cse = ProtectedGoogleCSE(api_key)
+                results = protected_cse.search_protected(
+                    query, num=max_results)
+                if not results.get('success', False):
                     return {
                         'query': query,
                         'found': 0,
                         'articles': [],
                         'urls': [],
                         'sources_searched': [],
-                        'error': results['error'],
+                        'error': results.get('error', 'Search failed'),
                         'timestamp': datetime.now().isoformat()
                     }
-                articles = results.get('articles', [])
+
+                # Convert the results format
+                articles = []
+                for item in results.get('items', []):
+                    articles.append({
+                        'title': item.get('title', ''),
+                        'url': item.get('link', ''),
+                        'snippet': item.get('snippet', ''),
+                        'source': 'Google CSE'
+                    })
             else:
                 # Direct Google CSE call
                 service = build('customsearch', 'v1', developerKey=api_key)
@@ -144,7 +156,7 @@ class handler(BaseHTTPRequestHandler):
                     cx=cse_id,
                     num=min(max_results, 10)
                 ).execute()
-                
+
                 articles = []
                 for item in result.get('items', []):
                     articles.append({
@@ -167,8 +179,9 @@ class handler(BaseHTTPRequestHandler):
 
         except HttpError as e:
             error_details = json.loads(e.content.decode()) if e.content else {}
-            error_message = error_details.get('error', {}).get('message', str(e))
-            
+            error_message = error_details.get(
+                'error', {}).get('message', str(e))
+
             return {
                 'query': query,
                 'found': 0,
@@ -178,7 +191,7 @@ class handler(BaseHTTPRequestHandler):
                 'error': f'Google CSE error: {error_message}',
                 'timestamp': datetime.now().isoformat()
             }
-            
+
         except Exception as e:
             return {
                 'query': query,
@@ -196,12 +209,12 @@ class handler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
-        
+
         error_response = {
             'error': message,
             'status': status_code,
             'timestamp': datetime.now().isoformat()
         }
-        
+
         response = json.dumps(error_response, indent=2)
         self.wfile.write(response.encode('utf-8'))
