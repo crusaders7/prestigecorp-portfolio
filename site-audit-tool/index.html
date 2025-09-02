@@ -5,9 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Site Audit Tool - PrestigeCorp</title>
-    <meta name="description" content="Professional website audit tool for SEO, performance, accessibility, and security analysis.">
+    <meta name="description"
+        content="Professional website audit tool for SEO, performance, accessibility, and security analysis.">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
@@ -91,12 +93,14 @@
         <div class="container mx-auto px-6 py-4">
             <div class="flex justify-between items-center">
                 <div class="flex items-center space-x-2">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                    <div
+                        class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
                         <i class="fas fa-search text-white text-lg"></i>
                     </div>
                     <div>
                         <div class="text-xl font-bold text-white">
-                            Site<span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Audit</span>
+                            Site<span
+                                class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Audit</span>
                         </div>
                         <div class="text-xs text-gray-400">Website Analysis Tool</div>
                     </div>
@@ -114,12 +118,14 @@
     <section class="min-h-screen flex items-center justify-center pt-20">
         <div class="container mx-auto px-6 text-center">
             <h1 class="text-6xl md:text-8xl font-bold text-white mb-6">
-                Site <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Audit</span> Tool
+                Site <span
+                    class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Audit</span>
+                Tool
             </h1>
             <p class="text-xl md:text-2xl text-gray-300 mb-8 max-w-4xl mx-auto">
                 Comprehensive website analysis for SEO, performance, and accessibility optimization.
             </p>
-            
+
             <div class="flex justify-center">
                 <a href="#audit" class="btn-primary text-lg">
                     <i class="fas fa-play"></i>
@@ -145,9 +151,8 @@
                                 <i class="fas fa-globe mr-2"></i>Website URL
                             </label>
                             <div class="flex space-x-4">
-                                <input type="url" id="websiteUrl" 
-                                       placeholder="https://example.com" 
-                                       class="audit-input flex-1">
+                                <input type="url" id="websiteUrl" placeholder="https://example.com"
+                                    class="audit-input flex-1">
                                 <button onclick="startAudit()" class="btn-primary">
                                     <i class="fas fa-search mr-2"></i>
                                     Analyze Site
@@ -156,20 +161,17 @@
                         </div>
                     </div>
 
-                    <!-- Results will be shown here -->
-                    <div id="results" class="mt-8 hidden">
-                        <div class="text-center">
-                            <h3 class="text-2xl font-bold text-white mb-4">Audit Complete!</h3>
-                            <p class="text-gray-300">Feature coming soon - API integration in progress</p>
-                        </div>
-                    </div>
+                    <!-- Results will be dynamically inserted here -->
                 </div>
             </div>
         </div>
     </section>
 
     <script>
-        function startAudit() {
+        // API base URL
+        const API_BASE = window.location.origin;
+
+        async function startAudit() {
             const url = document.getElementById('websiteUrl').value;
             
             if (!url) {
@@ -177,11 +179,182 @@
                 return;
             }
 
-            // Show results placeholder
-            document.getElementById('results').classList.remove('hidden');
+            // Validate URL format
+            try {
+                new URL(url.startsWith('http') ? url : 'https://' + url);
+            } catch (e) {
+                alert('Please enter a valid URL (e.g., https://example.com)');
+                return;
+            }
+
+            // Show loading state
+            showLoadingState();
             
-            // TODO: Implement actual audit API call
-            console.log('Starting audit for:', url);
+            try {
+                // Call audit API
+                const response = await fetch(`${API_BASE}/api/audit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+                
+                const results = await response.json();
+                
+                if (response.ok) {
+                    displayResults(results);
+                } else {
+                    throw new Error(results.error || 'Audit failed');
+                }
+            } catch (error) {
+                console.error('Audit error:', error);
+                hideLoadingState();
+                alert('Audit failed: ' + error.message);
+            }
+        }
+
+        function showLoadingState() {
+            hideResults();
+            
+            // Create loading element if it doesn't exist
+            let loadingDiv = document.getElementById('loadingState');
+            if (!loadingDiv) {
+                loadingDiv = document.createElement('div');
+                loadingDiv.id = 'loadingState';
+                loadingDiv.className = 'text-center py-12';
+                loadingDiv.innerHTML = `
+                    <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mb-4"></div>
+                    <h3 class="text-xl font-semibold text-white mb-2">Analyzing Website...</h3>
+                    <p class="text-gray-400" id="loadingMessage">Please wait while we analyze your site</p>
+                `;
+                document.querySelector('.card').appendChild(loadingDiv);
+            }
+            loadingDiv.classList.remove('hidden');
+        }
+
+        function hideLoadingState() {
+            const loadingDiv = document.getElementById('loadingState');
+            if (loadingDiv) {
+                loadingDiv.classList.add('hidden');
+            }
+        }
+
+        function hideResults() {
+            const resultsDiv = document.getElementById('results');
+            if (resultsDiv) {
+                resultsDiv.classList.add('hidden');
+            }
+        }
+
+        function displayResults(results) {
+            hideLoadingState();
+            
+            // Create or update results section
+            let resultsDiv = document.getElementById('results');
+            if (!resultsDiv) {
+                resultsDiv = document.createElement('div');
+                resultsDiv.id = 'results';
+                document.querySelector('.card').appendChild(resultsDiv);
+            }
+            
+            resultsDiv.innerHTML = `
+                <div class="mt-8 border-t border-gray-700 pt-8">
+                    <h3 class="text-2xl font-bold text-white mb-6 text-center">
+                        <i class="fas fa-chart-bar text-green-400 mr-2"></i>
+                        Audit Results for ${results.url}
+                    </h3>
+                    
+                    <!-- Overall Score -->
+                    <div class="text-center mb-8">
+                        <div class="w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center text-2xl font-bold ${getScoreColor(results.overall_score)}">
+                            ${results.overall_score}
+                        </div>
+                        <h4 class="text-xl font-semibold text-white mb-2">Overall Score</h4>
+                        <p class="text-gray-400">${getScoreDescription(results.overall_score)}</p>
+                    </div>
+
+                    <!-- Score Breakdown -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-black/20 rounded-xl p-6 text-center">
+                            <div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center text-lg font-bold ${getScoreColor(results.seo_score)}">
+                                ${results.seo_score}
+                            </div>
+                            <h5 class="font-semibold text-white mb-2">SEO</h5>
+                            <p class="text-sm text-gray-400">Search Engine Optimization</p>
+                        </div>
+
+                        <div class="bg-black/20 rounded-xl p-6 text-center">
+                            <div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center text-lg font-bold ${getScoreColor(results.performance_score)}">
+                                ${results.performance_score}
+                            </div>
+                            <h5 class="font-semibold text-white mb-2">Performance</h5>
+                            <p class="text-sm text-gray-400">Speed & Optimization</p>
+                        </div>
+
+                        <div class="bg-black/20 rounded-xl p-6 text-center">
+                            <div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center text-lg font-bold ${getScoreColor(results.accessibility_score)}">
+                                ${results.accessibility_score}
+                            </div>
+                            <h5 class="font-semibold text-white mb-2">Accessibility</h5>
+                            <p class="text-sm text-gray-400">User Experience</p>
+                        </div>
+
+                        <div class="bg-black/20 rounded-xl p-6 text-center">
+                            <div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center text-lg font-bold ${getScoreColor(results.security_score)}">
+                                ${results.security_score}
+                            </div>
+                            <h5 class="font-semibold text-white mb-2">Security</h5>
+                            <p class="text-sm text-gray-400">Safety & Protection</p>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Info -->
+                    <div class="bg-black/20 rounded-xl p-6 mb-6">
+                        <h4 class="text-lg font-semibold text-white mb-4">
+                            <i class="fas fa-info-circle text-blue-400 mr-2"></i>Analysis Summary
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">Pages Analyzed:</span>
+                                <span class="text-white">${results.pages_analyzed || 1}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">Analysis Date:</span>
+                                <span class="text-white">${results.timestamp || new Date().toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="text-center space-x-4">
+                        <button onclick="newAudit()" class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all">
+                            <i class="fas fa-plus mr-2"></i>
+                            New Audit
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            resultsDiv.classList.remove('hidden');
+        }
+
+        function getScoreColor(score) {
+            if (score >= 80) return 'bg-gradient-to-br from-green-500 to-emerald-600 text-white';
+            if (score >= 60) return 'bg-gradient-to-br from-yellow-500 to-orange-600 text-white';
+            return 'bg-gradient-to-br from-red-500 to-red-600 text-white';
+        }
+
+        function getScoreDescription(score) {
+            if (score >= 80) return 'Excellent! Your website is performing very well.';
+            if (score >= 60) return 'Good! There are some areas for improvement.';
+            return 'Needs improvement. Consider addressing the identified issues.';
+        }
+
+        function newAudit() {
+            document.getElementById('websiteUrl').value = '';
+            hideResults();
+            hideLoadingState();
         }
     </script>
 </body>
