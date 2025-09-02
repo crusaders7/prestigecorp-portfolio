@@ -171,45 +171,55 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
         @keyframes slideUp {
-            from { 
+            from {
                 opacity: 0;
                 transform: translateY(30px);
             }
-            to { 
+
+            to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
 
         @keyframes scaleIn {
-            from { 
+            from {
                 opacity: 0;
                 transform: scale(0.8);
             }
-            to { 
+
+            to {
                 opacity: 1;
                 transform: scale(1);
             }
         }
 
         @keyframes bounceIn {
-            0% { 
+            0% {
                 opacity: 0;
                 transform: scale(0.3);
             }
-            50% { 
+
+            50% {
                 opacity: 1;
                 transform: scale(1.05);
             }
-            70% { 
+
+            70% {
                 transform: scale(0.9);
             }
-            100% { 
+
+            100% {
                 opacity: 1;
                 transform: scale(1);
             }
@@ -234,8 +244,13 @@
         }
 
         @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
         }
 
         .score-circle:hover {
@@ -291,11 +306,14 @@
         }
 
         @keyframes float {
-            0%, 100% { 
+
+            0%,
+            100% {
                 transform: translateY(0px) rotate(0deg);
                 opacity: 0.7;
             }
-            50% { 
+
+            50% {
                 transform: translateY(-20px) rotate(180deg);
                 opacity: 1;
             }
@@ -312,21 +330,26 @@
         }
 
         @keyframes progress {
-            from { width: 100%; }
-            to { width: 0%; }
+            from {
+                width: 100%;
+            }
+
+            to {
+                width: 0%;
+            }
         }
-        
+
         .notification-enter {
             transform: translateX(100%);
             opacity: 0;
         }
-        
+
         .notification-enter-active {
             transform: translateX(0);
             opacity: 1;
             transition: all 0.3s ease;
         }
-        
+
         /* Enhanced loading animation */
         .loading-spinner {
             width: 16px;
@@ -338,15 +361,34 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         @keyframes dots {
-            0%, 20% { content: ''; }
-            40% { content: '.'; }
-            60% { content: '..'; }
-            80%, 100% { content: '...'; }
+
+            0%,
+            20% {
+                content: '';
+            }
+
+            40% {
+                content: '.';
+            }
+
+            60% {
+                content: '..';
+            }
+
+            80%,
+            100% {
+                content: '...';
+            }
         }
 
         .pulse {
@@ -354,9 +396,17 @@
         }
 
         @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
         }
 
         /* Micro-interactions */
@@ -377,10 +427,21 @@
             animation: slideInLeft 0.5s ease forwards;
         }
 
-        .result-item:nth-child(1) { animation-delay: 0.1s; }
-        .result-item:nth-child(2) { animation-delay: 0.2s; }
-        .result-item:nth-child(3) { animation-delay: 0.3s; }
-        .result-item:nth-child(4) { animation-delay: 0.4s; }
+        .result-item:nth-child(1) {
+            animation-delay: 0.1s;
+        }
+
+        .result-item:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .result-item:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        .result-item:nth-child(4) {
+            animation-delay: 0.4s;
+        }
 
         @keyframes slideInLeft {
             to {
@@ -476,7 +537,7 @@
 
     <script>
         // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             createParticles();
         });
 
@@ -484,7 +545,7 @@
         function createParticles() {
             const particlesContainer = document.getElementById('particles');
             const particleCount = 50;
-            
+
             for (let i = 0; i < particleCount; i++) {
                 const particle = document.createElement('div');
                 particle.className = 'particle';
@@ -501,7 +562,7 @@
 
         async function startAudit() {
             const url = document.getElementById('websiteUrl').value;
-            
+
             if (!url) {
                 showNotification('📝 Please enter a website URL', 'error');
                 return;
@@ -517,7 +578,7 @@
 
             // Show loading state
             showLoadingState();
-            
+
             try {
                 // Call audit API
                 const response = await fetch(`${API_BASE}/api/audit`, {
@@ -527,9 +588,9 @@
                     },
                     body: JSON.stringify({ url: url })
                 });
-                
+
                 const results = await response.json();
-                
+
                 if (response.ok) {
                     displayResults(results);
                 } else {
@@ -544,7 +605,7 @@
 
         function showLoadingState() {
             hideResults();
-            
+
             // Create loading element if it doesn't exist
             let loadingDiv = document.getElementById('loadingState');
             if (!loadingDiv) {
@@ -615,7 +676,7 @@
                 document.querySelector('.card').appendChild(loadingDiv);
             }
             loadingDiv.classList.remove('hidden');
-            
+
             // Simulate progress steps
             setTimeout(() => updateLoadingStep('seo', 'Analyzing SEO factors...'), 1000);
             setTimeout(() => updateLoadingStep('performance', 'Checking performance metrics...'), 2000);
@@ -629,7 +690,7 @@
                 // Mark previous steps as complete
                 const allSteps = ['fetch', 'seo', 'performance', 'accessibility', 'security'];
                 const currentIndex = allSteps.indexOf(step);
-                
+
                 for (let i = 0; i < currentIndex; i++) {
                     const prevStep = document.getElementById(`step-${allSteps[i]}`);
                     if (prevStep) {
@@ -641,14 +702,14 @@
                         }
                     }
                 }
-                
+
                 // Activate current step
                 stepElement.classList.remove('opacity-50');
                 stepElement.classList.add('opacity-100');
                 const stepIcon = stepElement.querySelector('.w-6');
                 const stepText = stepElement.querySelector('.text-gray-400');
                 const loadingSpinner = stepElement.querySelector('.w-4');
-                
+
                 if (stepIcon) stepIcon.className = 'w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center mr-3';
                 if (stepText) {
                     stepText.className = 'text-sm text-white';
@@ -656,7 +717,7 @@
                 if (loadingSpinner) {
                     loadingSpinner.className = 'loading-spinner';
                 }
-                
+
                 // Update message
                 const messageElement = document.getElementById('loadingMessage');
                 if (messageElement) {
@@ -681,7 +742,7 @@
 
         function displayResults(results) {
             hideLoadingState();
-            
+
             // Create or update results section
             let resultsDiv = document.getElementById('results');
             if (!resultsDiv) {
@@ -689,7 +750,7 @@
                 resultsDiv.id = 'results';
                 document.querySelector('.card').appendChild(resultsDiv);
             }
-            
+
             resultsDiv.innerHTML = `
                 <div class="mt-8 border-t border-gray-700 pt-8 result-item">
                     <h3 class="text-2xl font-bold text-white mb-6 text-center">
@@ -826,7 +887,7 @@
                     </div>
                 </div>
             `;
-            
+
             resultsDiv.classList.remove('hidden');
         }
 
@@ -869,11 +930,11 @@
                         </h5>
                         <ul class="space-y-1">
                 `;
-                
+
                 issues.forEach(issue => {
                     issuesHtml += `<li class="text-red-300 text-sm">• ${issue}</li>`;
                 });
-                
+
                 issuesHtml += `
                         </ul>
                     </div>
@@ -920,12 +981,12 @@
                         </h5>
                         <ul class="space-y-2">
                 `;
-                
+
                 recs.forEach(rec => {
                     const priority = getPriorityForRecommendation(rec);
                     const priorityClass = getPriorityClass(priority);
                     const priorityIcon = getPriorityIcon(priority);
-                    
+
                     recsHtml += `
                         <li class="${priorityClass} p-3 rounded-lg border-l-4 ${getPriorityBorderClass(priority)}">
                             <div class="flex items-start">
@@ -938,7 +999,7 @@
                         </li>
                     `;
                 });
-                
+
                 recsHtml += `
                         </ul>
                     </div>
@@ -992,11 +1053,11 @@
         }
 
         function getPriorityForRecommendation(rec) {
-            if (rec.toLowerCase().includes('critical') || rec.toLowerCase().includes('missing') || 
+            if (rec.toLowerCase().includes('critical') || rec.toLowerCase().includes('missing') ||
                 rec.toLowerCase().includes('https') || rec.toLowerCase().includes('security')) {
                 return 'high';
-            } else if (rec.toLowerCase().includes('optimize') || rec.toLowerCase().includes('improve') || 
-                       rec.toLowerCase().includes('consider')) {
+            } else if (rec.toLowerCase().includes('optimize') || rec.toLowerCase().includes('improve') ||
+                rec.toLowerCase().includes('consider')) {
                 return 'medium';
             }
             return 'low';
@@ -1073,7 +1134,7 @@
                     security_analysis: `Security Score: ${results.security_score}/100`
                 }
             };
-            
+
             const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -1083,14 +1144,14 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            
+
             showNotification('📄 Detailed audit report downloaded successfully!', 'success');
         }
 
         function showNotification(message, type, duration = 5000) {
             const existing = document.getElementById('notification');
             if (existing) existing.remove();
-            
+
             const notification = document.createElement('div');
             notification.id = 'notification';
             notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-xl transform transition-all duration-300 max-w-md ${getNotificationClass(type)} scale-in`;
@@ -1108,7 +1169,7 @@
                     </button>
                 </div>
             `;
-            
+
             document.body.appendChild(notification);
             setTimeout(() => {
                 if (notification.parentElement) {
@@ -1119,16 +1180,16 @@
         }
 
         function getNotificationIcon(type) {
-            switch(type) {
+            switch (type) {
                 case 'success': return '<i class="fas fa-check-circle mr-2"></i>';
                 case 'error': return '<i class="fas fa-exclamation-circle mr-2"></i>';
                 case 'info': return '<i class="fas fa-info-circle mr-2"></i>';
                 default: return '<i class="fas fa-bell mr-2"></i>';
             }
         }
-        
+
         function getNotificationTitle(type) {
-            switch(type) {
+            switch (type) {
                 case 'success': return 'Success';
                 case 'error': return 'Error';
                 case 'info': return 'Info';
@@ -1137,7 +1198,7 @@
         }
 
         function getNotificationClass(type) {
-            switch(type) {
+            switch (type) {
                 case 'success': return 'bg-green-500 text-white border border-green-400';
                 case 'error': return 'bg-red-500 text-white border border-red-400';
                 case 'info': return 'bg-blue-500 text-white border border-blue-400';
