@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Audit Tool - PrestigeCorp</title>
+    <meta name="description" content="Professional website audit tool for SEO, performance, accessibility, and security analysis.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --dark-gradient: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--dark-gradient);
+            color: #ffffff;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: white;
+            font-weight: 600;
+            padding: 16px 32px;
+            border-radius: 16px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 32px;
+        }
+
+        .audit-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px 20px;
+            color: #ffffff;
+            font-size: 16px;
+        }
+
+        .audit-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="fixed w-full z-30 glass">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                        <i class="fas fa-search text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <div class="text-xl font-bold text-white">
+                            Site<span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Audit</span>
+                        </div>
+                        <div class="text-xs text-gray-400">Website Analysis Tool</div>
+                    </div>
+                </div>
+                <nav class="flex space-x-8 items-center">
+                    <a href="https://prestigecorp.au" class="btn-secondary text-sm py-2 px-4">
+                        <i class="fas fa-arrow-left mr-2"></i>Portfolio
+                    </a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="min-h-screen flex items-center justify-center pt-20">
+        <div class="container mx-auto px-6 text-center">
+            <h1 class="text-6xl md:text-8xl font-bold text-white mb-6">
+                Site <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">Audit</span> Tool
+            </h1>
+            <p class="text-xl md:text-2xl text-gray-300 mb-8 max-w-4xl mx-auto">
+                Comprehensive website analysis for SEO, performance, and accessibility optimization.
+            </p>
+            
+            <div class="flex justify-center">
+                <a href="#audit" class="btn-primary text-lg">
+                    <i class="fas fa-play"></i>
+                    Start Website Audit
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Audit Interface -->
+    <section id="audit" class="py-20">
+        <div class="container mx-auto px-6">
+            <div class="max-w-4xl mx-auto">
+                <div class="card">
+                    <h2 class="text-4xl font-bold text-white mb-8 text-center">
+                        <i class="fas fa-search text-indigo-400 mr-3"></i>
+                        Website Audit
+                    </h2>
+
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-white mb-3">
+                                <i class="fas fa-globe mr-2"></i>Website URL
+                            </label>
+                            <div class="flex space-x-4">
+                                <input type="url" id="websiteUrl" 
+                                       placeholder="https://example.com" 
+                                       class="audit-input flex-1">
+                                <button onclick="startAudit()" class="btn-primary">
+                                    <i class="fas fa-search mr-2"></i>
+                                    Analyze Site
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results will be shown here -->
+                    <div id="results" class="mt-8 hidden">
+                        <div class="text-center">
+                            <h3 class="text-2xl font-bold text-white mb-4">Audit Complete!</h3>
+                            <p class="text-gray-300">Feature coming soon - API integration in progress</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        function startAudit() {
+            const url = document.getElementById('websiteUrl').value;
+            
+            if (!url) {
+                alert('Please enter a website URL');
+                return;
+            }
+
+            // Show results placeholder
+            document.getElementById('results').classList.remove('hidden');
+            
+            // TODO: Implement actual audit API call
+            console.log('Starting audit for:', url);
+        }
+    </script>
+</body>
+
+</html>
