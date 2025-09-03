@@ -2,12 +2,11 @@
 """
 Google CSE News Search API - Vercel Serverless Function
 Powered by Google Custom Search Engine for reliable news results
-Updated: August 31, 2025 - Force fresh deployment
+Updated: September 3, 2025 - Fixed function invocation
 """
-from http.server import BaseHTTPRequestHandler
+
 import json
 import os
-import sys
 from datetime import datetime
 
 # Try to import Google CSE modules
@@ -19,115 +18,154 @@ except ImportError:
     GOOGLE_AVAILABLE = False
 
 try:
-    from protected_cse import ProtectedGoogleCSE
+    from .protected_cse import ProtectedGoogleCSE
     PROTECTION_AVAILABLE = True
 except ImportError:
-    PROTECTION_AVAILABLE = False
+    try:
+        from protected_cse import ProtectedGoogleCSE
+        PROTECTION_AVAILABLE = True
+    except ImportError:
+        PROTECTION_AVAILABLE = False
 
 
-class handler(BaseHTTPRequestHandler):
-
-    def do_OPTIONS(self):
-        """Handle CORS preflight requests"""
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        self.end_headers()
-
-    def do_GET(self):
-        """Reject GET requests - API only accepts POST"""
-        self.send_response(501)
-        self.send_header('Content-Type', 'text/html')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
-
-        response = """
-        <h1>Error response</h1>
-        <p>Error code: 501</p>
-        <p>Message: Unsupported method ('GET').</p>
-        <p>Error code explanation: 501 - Server does not support this operation.</p>
-        """
-        self.wfile.write(response.encode())
-
-    def do_POST(self):
-        """Handle POST requests for news search"""
-        try:
-            # Read request data
-            content_length = int(self.headers.get('Content-Length', 0))
-            if content_length == 0:
-                self.send_error_response(400, 'No data received')
-                return
-
-            post_data = self.rfile.read(content_length)
-
+def handler(request, response):
+    """Vercel serverless function handler"""
+    
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response.status_code = 200
+        response.headers.update({
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+        })
+        return ''
+    
+    # Only allow POST requests
+    if request.method != 'POST':
+        response.status_code = 405
+        response.headers.update({
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+        })
+        return json.dumps({
+            'error': 'Method not allowed. Use POST.',
+            'status': 405,
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    try:
+        # Parse request data
+        if hasattr(request, 'get_json'):
+            data = request.get_json() or {}
+        else:
+            # Handle raw request body
+            import io
+            if hasattr(request, 'body'):
+                body = request.body
+            elif hasattr(request, 'data'):
+                body = request.data
+            else:
+                body = b'{}'
+            
+            if isinstance(body, str):
+                body = body.encode('utf-8')
+            
             try:
-                data = json.loads(post_data.decode('utf-8'))
-            except (json.JSONDecodeError, UnicodeDecodeError) as e:
-                self.send_error_response(400, f'Invalid JSON data: {str(e)}')
-                return
-
-            # Extract search parameters
-            query = data.get('query', '').strip()
-            sources = data.get('sources', [])
-            max_results = data.get('max_results', 10)
-
-            if not query:
-                self.send_error_response(
-                    400, 'UPDATED_API_v2: Query parameter is required')
-                return
-
-            # Perform search
-            search_results = self.search_news(query, sources, max_results)
-
-            # Send response
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-
-            response = json.dumps(search_results, indent=2, ensure_ascii=False)
-            self.wfile.write(response.encode('utf-8'))
-
-        except Exception as e:
-            self.send_error_response(500, f'Internal server error: {str(e)}')
-
-    def search_news(self, query, sources, max_results):
-        """Search for news using Google Custom Search Engine"""
-
-        # Check if Google CSE is available
-        if not GOOGLE_AVAILABLE:
-            return {
-                'query': query,
-                'found': 0,
-                'articles': [],
-                'urls': [],
-                'sources_searched': [],
-                'error': 'Google API client not available',
+                data = json.loads(body.decode('utf-8'))
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                data = {}
+        
+        # Extract search parameters
+        query = data.get('query', '').strip()
+        sources = data.get('sources', [])
+        max_results = data.get('max_results', 10)
+        
+        if not query:
+            response.status_code = 400
+            response.headers.update({
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+            })
+            return json.dumps({
+                'error': 'Query parameter is required',
+                'status': 400,
                 'timestamp': datetime.now().isoformat()
-            }
+            })
+        
+        # Perform search
+        search_results = search_news(query, sources, max_results)
+        
+        # Send response
+        response.status_code = 200
+        response.headers.update({
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+        })
+        
+        return json.dumps(search_results, ensure_ascii=False)
+        
+    except Exception as e:
+        response.status_code = 500
+        response.headers.update({
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+        })
+        
+        return json.dumps({
+            'error': f'Internal server error: {str(e)}',
+            'status': 500,
+            'timestamp': datetime.now().isoformat()
+        })
 
-        # Get API credentials from environment
-        api_key = os.environ.get('GOOGLE_API_KEY')
-        cse_id = os.environ.get('GOOGLE_CSE_ID')
-
-        if not api_key or not cse_id:
-            return {
-                'query': query,
-                'found': 0,
-                'articles': [],
-                'urls': [],
-                'sources_searched': [],
-                'error': 'Google API credentials not configured',
-                'timestamp': datetime.now().isoformat()
-            }
-
-        try:
-            # Use protection if available
-            if PROTECTION_AVAILABLE:
+def search_news(query, sources, max_results):
+    """Search for news using Google Custom Search Engine"""
+    
+    # Check if Google CSE is available
+    if not GOOGLE_AVAILABLE:
+        return {
+            'query': query,
+            'found': 0,
+            'articles': [],
+            'urls': [],
+            'sources_searched': [],
+            'error': 'Google API client not available - check dependencies',
+            'timestamp': datetime.now().isoformat()
+        }
+    
+    # Get API credentials from environment
+    api_key = os.environ.get('GOOGLE_API_KEY')
+    cse_id = os.environ.get('GOOGLE_CSE_ID')
+    
+    if not api_key:
+        return {
+            'query': query,
+            'found': 0,
+            'articles': [],
+            'urls': [],
+            'sources_searched': [],
+            'error': 'Google API key not configured in environment variables',
+            'timestamp': datetime.now().isoformat()
+        }
+    
+    if not cse_id:
+        return {
+            'query': query,
+            'found': 0,
+            'articles': [],
+            'urls': [],
+            'sources_searched': [],
+            'error': 'Google CSE ID not configured in environment variables',
+            'timestamp': datetime.now().isoformat()
+        }
+    
+    try:
+        # Use protection if available
+        if PROTECTION_AVAILABLE:
+            try:
                 protected_cse = ProtectedGoogleCSE(api_key)
-                results = protected_cse.search_protected(
-                    query, num=max_results)
+                results = protected_cse.search_protected(query, num=max_results)
+                
                 if not results.get('success', False):
                     return {
                         'query': query,
@@ -135,10 +173,10 @@ class handler(BaseHTTPRequestHandler):
                         'articles': [],
                         'urls': [],
                         'sources_searched': [],
-                        'error': results.get('error', 'Search failed'),
+                        'error': results.get('error', 'Protected search failed'),
                         'timestamp': datetime.now().isoformat()
                     }
-
+                
                 # Convert the results format
                 articles = []
                 for item in results.get('items', []):
@@ -148,15 +186,28 @@ class handler(BaseHTTPRequestHandler):
                         'snippet': item.get('snippet', ''),
                         'source': 'Google CSE'
                     })
-            else:
-                # Direct Google CSE call
+                    
+            except Exception as protection_error:
+                # Fall back to direct CSE if protection fails
+                return {
+                    'query': query,
+                    'found': 0,
+                    'articles': [],
+                    'urls': [],
+                    'sources_searched': [],
+                    'error': f'Protection module error: {str(protection_error)}',
+                    'timestamp': datetime.now().isoformat()
+                }
+        else:
+            # Direct Google CSE call
+            try:
                 service = build('customsearch', 'v1', developerKey=api_key)
                 result = service.cse().list(
                     q=query,
                     cx=cse_id,
                     num=min(max_results, 10)
                 ).execute()
-
+                
                 articles = []
                 for item in result.get('items', []):
                     articles.append({
@@ -165,56 +216,53 @@ class handler(BaseHTTPRequestHandler):
                         'snippet': item.get('snippet', ''),
                         'source': 'Google CSE'
                     })
-
-            # Format response
-            return {
-                'query': query,
-                'found': len(articles),
-                'articles': articles,
-                'urls': [article['url'] for article in articles],
-                'sources_searched': ['Google CSE'],
-                'timestamp': datetime.now().isoformat(),
-                'cost_estimate': f'${len(articles) * 0.005:.3f}' if articles else '$0.000'
-            }
-
-        except HttpError as e:
+                    
+            except Exception as direct_error:
+                return {
+                    'query': query,
+                    'found': 0,
+                    'articles': [],
+                    'urls': [],
+                    'sources_searched': [],
+                    'error': f'Direct CSE error: {str(direct_error)}',
+                    'timestamp': datetime.now().isoformat()
+                }
+        
+        # Format response
+        return {
+            'query': query,
+            'found': len(articles),
+            'articles': articles,
+            'urls': [article['url'] for article in articles],
+            'sources_searched': ['Google CSE'],
+            'timestamp': datetime.now().isoformat(),
+            'cost_estimate': f'${len(articles) * 0.005:.3f}' if articles else '$0.000'
+        }
+        
+    except HttpError as e:
+        try:
             error_details = json.loads(e.content.decode()) if e.content else {}
-            error_message = error_details.get(
-                'error', {}).get('message', str(e))
-
-            return {
-                'query': query,
-                'found': 0,
-                'articles': [],
-                'urls': [],
-                'sources_searched': [],
-                'error': f'Google CSE error: {error_message}',
-                'timestamp': datetime.now().isoformat()
-            }
-
-        except Exception as e:
-            return {
-                'query': query,
-                'found': 0,
-                'articles': [],
-                'urls': [],
-                'sources_searched': [],
-                'error': f'Search error: {str(e)}',
-                'timestamp': datetime.now().isoformat()
-            }
-
-    def send_error_response(self, status_code, message):
-        """Send an error response"""
-        self.send_response(status_code)
-        self.send_header('Content-Type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
-
-        error_response = {
-            'error': message,
-            'status': status_code,
+            error_message = error_details.get('error', {}).get('message', str(e))
+        except:
+            error_message = str(e)
+        
+        return {
+            'query': query,
+            'found': 0,
+            'articles': [],
+            'urls': [],
+            'sources_searched': [],
+            'error': f'Google CSE HTTP error: {error_message}',
             'timestamp': datetime.now().isoformat()
         }
-
-        response = json.dumps(error_response, indent=2)
-        self.wfile.write(response.encode('utf-8'))
+        
+    except Exception as e:
+        return {
+            'query': query,
+            'found': 0,
+            'articles': [],
+            'urls': [],
+            'sources_searched': [],
+            'error': f'Search error: {str(e)}',
+            'timestamp': datetime.now().isoformat()
+        }

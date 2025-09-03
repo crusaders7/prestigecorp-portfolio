@@ -1,203 +1,270 @@
-from http.server import BaseHTTPRequestHandler
 import json
 import requests
 from bs4 import BeautifulSoup
+from datetime import datetime
 
 
-class handler(BaseHTTPRequestHandler):
-    def do_OPTIONS(self):
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        self.end_headers()
-
-    def do_POST(self):
-        try:
-            content_length = int(self.headers.get('Content-Length', 0))
-            if content_length == 0:
-                self.send_error_response(400, 'No data received')
-                return
-
-            post_data = self.rfile.read(content_length)
-
+def handler(request, response):
+    """Vercel serverless function handler for article scraping"""
+    
+    # Handle CORS preflight
+    if request.method == 'OPTIONS':
+        response.status_code = 200
+        response.headers.update({
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+        })
+        return ''
+    
+    # Only allow POST requests
+    if request.method != 'POST':
+        response.status_code = 405
+        response.headers.update({
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+        })
+        return json.dumps({
+            'error': 'Method not allowed. Use POST.',
+            'status': 405,
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    try:
+        # Parse request data
+        if hasattr(request, 'get_json'):
+            data = request.get_json() or {}
+        else:
+            # Handle raw request body
+            if hasattr(request, 'body'):
+                body = request.body
+            elif hasattr(request, 'data'):
+                body = request.data
+            else:
+                body = b'{}'
+            
+            if isinstance(body, str):
+                body = body.encode('utf-8')
+            
             try:
-                data = json.loads(post_data.decode('utf-8'))
-            except json.JSONDecodeError as e:
-                self.send_error_response(400, f'Invalid JSON data: {str(e)}')
-                return
-            except UnicodeDecodeError as e:
-                self.send_error_response(
-                    400, f'Invalid UTF-8 encoding: {str(e)}')
-                return
+                data = json.loads(body.decode('utf-8'))
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                data = {}
+        
+        urls = data.get('urls', [])
+        if not urls or not isinstance(urls, list):
+            response.status_code = 400
+            response.headers.update({
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+            })
+            return json.dumps({
+                'error': 'No URLs provided or URLs not in list format',
+                'status': 400,
+                'timestamp': datetime.now().isoformat()
+            })
+        
+        # Scrape articles
+        results = scrape_articles(urls)
+        
+        # Send response
+        response.status_code = 200
+        response.headers.update({
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+        })
+        
+        return json.dumps(results, ensure_ascii=False)
+        
+    except Exception as e:
+        response.status_code = 500
+        response.headers.update({
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+        })
+        
+        return json.dumps({
+            'error': f'Internal server error: {str(e)}',
+            'status': 500,
+            'timestamp': datetime.now().isoformat()
+        })
 
-            urls = data.get('urls', [])
-            if not urls or not isinstance(urls, list):
-                self.send_error_response(
-                    400, 'No URLs provided or URLs not in list format')
-                return
 
-            results = []
-            scraped_count = 0
+def scrape_articles(urls):
+    """Scrape articles from provided URLs"""
+    results = []
+    scraped_count = 0
+    
+    for i, url in enumerate(urls):
+        try:
+            print(f"Scraping {i+1}/{len(urls)}: {url}")
+            resp = requests.get(url, timeout=10, headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            })
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.content, 'html.parser')
 
-            for i, url in enumerate(urls):
-                try:
-                    print(f"Scraping {i+1}/{len(urls)}: {url}")
-                    resp = requests.get(url, timeout=10)
-                    resp.raise_for_status()
-                    soup = BeautifulSoup(resp.content, 'html.parser')
-
-                    # PRIORITY 1: Try JSON-LD structured data extraction for title
-                    json_ld_title = ''
-                    json_ld_date = ''
+            # Enhanced content extraction with better filtering
+            content_found = False
+            content = ''
+            
+            # PRIORITY 1: Try JSON-LD structured data extraction
+            json_ld_content = ''
+            json_ld_title = ''
+            json_ld_date = ''
+            
+            try:
+                json_scripts = soup.find_all('script', type='application/ld+json')
+                for script in json_scripts:
                     try:
-                        # Find all JSON-LD script tags
-                        json_scripts = soup.find_all('script', type='application/ld+json')
-                        for script in json_scripts:
-                            try:
-                                json_data = json.loads(script.string or '')
-                                
-                                # Handle single object or array
-                                if isinstance(json_data, list):
-                                    json_data = json_data[0] if json_data else {}
-                                
-                                # Look for NewsArticle type
-                                if json_data.get('@type') == 'NewsArticle':
-                                    headline = json_data.get('headline', '')
-                                    if headline:
-                                        json_ld_title = headline
-                                    
-                                    # Try different date fields
-                                    date_published = (json_data.get('datePublished') or 
-                                                    json_data.get('dateCreated') or 
-                                                    json_data.get('dateModified'))
-                                    if date_published:
-                                        json_ld_date = date_published
-                                    
-                                    if headline:  # Found a NewsArticle with headline
-                                        break
-                            except json.JSONDecodeError:
-                                continue
-                    except Exception as e:
-                        print(f"Error parsing JSON-LD for title/date: {e}")
-                    
-                    # Enhanced title extraction
-                    title_text = ''
-                    
-                    # PRIORITY 1: Use JSON-LD title if available
-                    if json_ld_title:
-                        title_text = json_ld_title
-                        print(f"Using JSON-LD title: {title_text[:100]}...")
-                    else:
-                        # Method 1: Try h1 elements
-                        h1_elements = soup.find_all('h1')
-                        for h1 in h1_elements:
-                            title_candidate = h1.get_text(strip=True)
-                            if title_candidate and len(title_candidate) > 10:
-                                title_text = title_candidate
+                        json_data = json.loads(script.string or '')
+                        
+                        if isinstance(json_data, list):
+                            json_data = json_data[0] if json_data else {}
+                        
+                        if json_data.get('@type') == 'NewsArticle':
+                            article_body = json_data.get('articleBody', '')
+                            if article_body and len(article_body) > 200:
+                                json_ld_content = article_body
+                                json_ld_title = json_data.get('headline', '')
+                                json_ld_date = (json_data.get('datePublished') or 
+                                              json_data.get('dateCreated') or 
+                                              json_data.get('dateModified', ''))
                                 break
+                    except json.JSONDecodeError:
+                        continue
+            except Exception as e:
+                print(f"JSON-LD parsing error: {e}")
+            
+            # Enhanced title extraction
+            title_text = ''
+            if json_ld_title:
+                title_text = json_ld_title
+            else:
+                # Try multiple title extraction methods
+                title_selectors = [
+                    'h1', 'meta[property="og:title"]', 'title',
+                    '.article-title', '.post-title', '.entry-title'
+                ]
+                for selector in title_selectors:
+                    elem = soup.select_one(selector)
+                    if elem:
+                        if selector.startswith('meta'):
+                            title_text = elem.get('content', '')
+                        else:
+                            title_text = elem.get_text(strip=True)
+                        if title_text and len(title_text) > 10:
+                            break
+            
+            # Use JSON-LD content if available
+            if len(json_ld_content) > 200:
+                content = json_ld_content
+                content_found = True
+            else:
+                # Enhanced content selectors
+                content_selectors = [
+                    'div.story-body', 'div.article-body', 'div.content',
+                    'div.field-name-body', 'section.article-body',
+                    'div.entry-content', 'article .content', 'main article',
+                    '[class*="article-content"]', '[class*="story-content"]',
+                    'article'
+                ]
+                
+                for selector in content_selectors:
+                    content_div = soup.select_one(selector)
+                    if content_div:
+                        # Extract text content
+                        content = content_div.get_text(separator='\n', strip=True)
                         
-                        # Method 2: Try meta title tags
-                        if not title_text:
-                            meta_title = soup.find('meta', attrs={'property': 'og:title'})
-                            if meta_title:
-                                title_text = meta_title.get('content', '')
-                            else:
-                                page_title = soup.find('title')
-                                if page_title:
-                                    title_text = page_title.get_text(strip=True)
-                        
-                        # Method 3: Look for title in common classes
-                        if not title_text:
-                            title_selectors = [
-                                '.article-title',
-                                '.post-title',
-                                '.entry-title',
-                                '.story-title',
-                                '[class*="title"]'
-                            ]
-                            
-                            for selector in title_selectors:
-                                title_elem = soup.select_one(selector)
-                                if title_elem:
-                                    title_candidate = title_elem.get_text(strip=True)
-                                    if title_candidate and len(title_candidate) > 10:
-                                        title_text = title_candidate
-                                        break
-
-                    # PRIORITY 1: Try JSON-LD structured data extraction (for modern sites like Illawarra Mercury)
-                    json_ld_content = ''
-                    try:
-                        # Find all JSON-LD script tags
-                        json_scripts = soup.find_all('script', type='application/ld+json')
-                        for script in json_scripts:
-                            try:
-                                json_data = json.loads(script.string or '')
-                                
-                                # Handle single object or array
-                                if isinstance(json_data, list):
-                                    json_data = json_data[0] if json_data else {}
-                                
-                                # Look for NewsArticle type
-                                if json_data.get('@type') == 'NewsArticle':
-                                    article_body = json_data.get('articleBody', '')
-                                    if article_body and len(article_body) > 200:
-                                        json_ld_content = article_body
-                                        print(f"Found JSON-LD articleBody: {len(json_ld_content)} chars")
-                                        break
-                            except json.JSONDecodeError:
-                                continue
-                    except Exception as e:
-                        print(f"Error parsing JSON-LD: {e}")
-                    
-                    # If JSON-LD extraction was successful, use it
-                    if len(json_ld_content) > 200:
-                        content = json_ld_content
-                        content_found = True
-                        print(f"Using JSON-LD content: {len(content)} characters")
-                    else:
-                        # Enhanced content selectors for better article extraction
-                        content_selectors = [
-                            # Mercury-specific selectors
-                            'div.story-body',
-                            'div.story-content', 
-                            'div.article-body',
-                            'div.article-content',
-                            'div.body-text',
-                            'div.field-name-body',
-                            'div.field-type-text-with-summary',
-                            'div[data-module="ArticleBody"]',
-                            'div.node-article div.content',
-                            'section.article-body',
-                            
-                            # Common article selectors
-                            'div.entry-content',
-                            'div.post-content',
-                            'div.content',
-                            'div.article-text',
-                            'div.content-body',
-                            'div.main-content',
-                            'section.story-body',
-                            'article .content',
-                            'article main',
-                            'article div.body',
-                            '.article-wrapper .content',
-                            '.story-wrapper .body',
-                            '.post-body',
-                            '.entry-body',
-                            'main article',
-                            
-                            # Generic selectors
-                            '[class*="article-content"]',
-                            '[class*="story-content"]',
-                            '[class*="post-content"]',
-                            '[class*="body-content"]',
-                            '[class*="article-body"]',
-                            '[class*="story-body"]',
-                            
-                            # Fallback to article tag
-                            'article'
+                        # Filter out subscription notices and navigation
+                        unwanted_phrases = [
+                            'Your digital subscription',
+                            'Access unlimited content',
+                            "Today's Paper",
+                            'Subscribe now',
+                            'Sign up',
+                            'Follow us',
+                            'Share this',
+                            'Related articles'
                         ]
+                        
+                        for phrase in unwanted_phrases:
+                            content = content.replace(phrase, '')
+                        
+                        # Clean up extra whitespace
+                        content = '\n'.join(line.strip() for line in content.split('\n') if line.strip())
+                        
+                        if len(content) > 100:
+                            content_found = True
+                            break
+            
+            # Enhanced date extraction
+            date_text = json_ld_date if json_ld_date else ''
+            if not date_text:
+                date_selectors = [
+                    'meta[property="article:published_time"]',
+                    'meta[name="date"]',
+                    'meta[name="publish-date"]',
+                    'time[datetime]',
+                    '.date', '.publish-date', '.article-date'
+                ]
+                
+                for selector in date_selectors:
+                    date_elem = soup.select_one(selector)
+                    if date_elem:
+                        if selector.startswith('meta'):
+                            date_text = date_elem.get('content', '')
+                        elif selector == 'time[datetime]':
+                            date_text = date_elem.get('datetime', '')
+                        else:
+                            date_text = date_elem.get_text(strip=True)
+                        if date_text:
+                            break
+            
+            if content_found and len(content) > 50:
+                article_data = {
+                    'url': url,
+                    'title': title_text or f'Article {i+1}',
+                    'content': content,
+                    'content_length': len(content),
+                    'date': date_text,
+                    'scraped_at': datetime.now().isoformat(),
+                    'source': 'web_scraping'
+                }
+                results.append(article_data)
+                scraped_count += 1
+            else:
+                # Add error entry for failed scraping
+                results.append({
+                    'url': url,
+                    'error': 'Could not extract sufficient content',
+                    'scraped_at': datetime.now().isoformat()
+                })
+                
+        except requests.RequestException as e:
+            results.append({
+                'url': url,
+                'error': f'Request failed: {str(e)}',
+                'scraped_at': datetime.now().isoformat()
+            })
+        except Exception as e:
+            results.append({
+                'url': url,
+                'error': f'Scraping error: {str(e)}',
+                'scraped_at': datetime.now().isoformat()
+            })
+    
+    # Separate successful articles from errors
+    articles = [r for r in results if 'content' in r]
+    errors = [r for r in results if 'error' in r]
+    
+    return {
+        'scraped': scraped_count,
+        'total_requested': len(urls),
+        'articles': articles,
+        'errors': errors,
+        'timestamp': datetime.now().isoformat()
+    }
 
                         content = ''
                         content_found = False
