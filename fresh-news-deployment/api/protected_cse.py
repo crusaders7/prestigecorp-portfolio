@@ -211,53 +211,103 @@ class ProtectedGoogleCSE:
                 "protection": "Input validation"
             }
         
-        if num > 10:
-            print("⚠️  Limiting results to 10 to reduce costs")
-            num = 10
+        if num > 20:
+            print(f"⚠️  Limiting results to 20 to manage costs (requested: {num})")
+            num = 20
         
-        # Step 4: Make the API request
+        # Step 4: Make the API request(s) with pagination for higher result counts
         try:
-            params = {
-                'key': self.api_key,
-                'cx': self.cse_id,
-                'q': query.strip(),
-                'num': num,
-                'safe': 'off',
-                'fields': 'items(title,link,snippet,displayLink),searchInformation(totalResults,searchTime)'
+            all_items = []
+            total_results = '0'
+            search_time = '0'
+            
+            # Calculate how many API calls we need (max 10 results per call)
+            results_per_call = 10
+            total_calls_needed = min((num + results_per_call - 1) // results_per_call, 10)  # Max 10 calls for 100 results
+            
+            for call_num in range(total_calls_needed):
+                # Check if we can make another API request
+                can_request, reason = self.tracker.can_make_request()
+                if not can_request:
+                    print(f"⚠️  Stopping pagination early: {reason}")
+                    break
+                
+                start_index = call_num * results_per_call + 1  # API uses 1-based indexing
+                results_this_call = min(results_per_call, num - len(all_items))
+                
+                if results_this_call <= 0:
+                    break
+                
+                params = {
+                    'key': self.api_key,
+                    'cx': self.cse_id,
+                    'q': query.strip(),
+                    'num': results_this_call,
+                    'start': start_index,
+                    'safe': 'off',
+                    'fields': 'items(title,link,snippet,displayLink),searchInformation(totalResults,searchTime)'
+                }
+                
+                print(f"🔍 Making protected API call {call_num + 1}/{total_calls_needed} for: '{query}' (start: {start_index})")
+                response = requests.get(self.api_endpoint, params=params, timeout=30)
+                
+                if response.status_code == 200:
+                    # Record successful API call
+                    self.tracker.record_api_call()
+                    
+                    data = response.json()
+                    
+                    # Store total results info from first call
+                    if call_num == 0:
+                        total_results = data.get('searchInformation', {}).get('totalResults', '0')
+                        search_time = data.get('searchInformation', {}).get('searchTime', '0')
+                    
+                    # Add items from this call
+                    call_items = data.get('items', [])
+                    all_items.extend(call_items)
+                    
+                    # If we got fewer results than requested, there are no more results
+                    if len(call_items) < results_this_call:
+                        print(f"📄 Got {len(call_items)} results (expected {results_this_call}) - no more results available")
+                        break
+                        
+                    # Don't exceed the requested num
+                    if len(all_items) >= num:
+                        all_items = all_items[:num]
+                        break
+                        
+                else:
+                    print(f"❌ API call {call_num + 1} failed with status {response.status_code}")
+                    if call_num == 0:  # If first call fails, return error
+                        return {
+                            "success": False,
+                            "error": f"API request failed with status {response.status_code}",
+                            "response": response.text,
+                            "status_code": response.status_code
+                        }
+                    else:  # If subsequent calls fail, return what we have
+                        print(f"⚠️  Continuing with {len(all_items)} results from successful calls")
+                        break
+            
+            # Create final result
+            result = {
+                "success": True,
+                "query": query,
+                "total_results": total_results,
+                "search_time": search_time,
+                "items": all_items,
+                "api_calls_made": min(call_num + 1, total_calls_needed),
+                "results_returned": len(all_items),
+                "cost_info": {
+                    "cost_per_query": self.cost_per_query,
+                    "estimated_cost": self.cost_per_query * min(call_num + 1, total_calls_needed)
+                }
             }
             
-            print(f"🔍 Making protected API call for: '{query}'")
-            response = requests.get(self.api_endpoint, params=params, timeout=30)
+            # Cache the result
+            self.tracker.cache_result(query, result, num)
             
-            if response.status_code == 200:
-                # Record successful API call
-                self.tracker.record_api_call()
-                
-                data = response.json()
-                result = {
-                    "success": True,
-                    "query": query,
-                    "total_results": data.get('searchInformation', {}).get('totalResults', '0'),
-                    "search_time": data.get('searchInformation', {}).get('searchTime', '0'),
-                    "items": data.get('items', []),
-                    "cost_info": {
-                        "cost_per_query": self.cost_per_query,
-                        "estimated_cost": self.cost_per_query
-                    }
-                }
-                
-                # Cache the result
-                self.tracker.cache_result(query, result, num)
-                
-                return result
-            
-            else:
-                return {
-                    "success": False,
-                    "error": f"API request failed with status {response.status_code}",
-                    "response": response.text,
-                    "status_code": response.status_code
-                }
+            return result
                 
         except Exception as e:
             return {
