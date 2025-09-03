@@ -13,7 +13,7 @@ def test_search_endpoint():
     try:
         print('\n1. Testing POST /api/search...')
         response = requests.post(
-            'https://fresh-news-deployment-d53rs2xva-prestigecorp4s-projects.vercel.app/api/search',
+            'https://fresh-news-deployment-2h2wcwy61-prestigecorp4s-projects.vercel.app/api/search',
             json={'query': 'climate change', 'sources': [
                 'mercury'], 'max_results': 5},
             timeout=30
@@ -57,7 +57,7 @@ def test_scrape_endpoint():
     try:
         print('\n2. Testing POST /api/scrape...')
         response = requests.post(
-            'https://fresh-news-deployment-d53rs2xva-prestigecorp4s-projects.vercel.app/api/scrape',
+            'https://fresh-news-deployment-2h2wcwy61-prestigecorp4s-projects.vercel.app/api/scrape',
             json={'urls': test_urls},
             timeout=30
         )
