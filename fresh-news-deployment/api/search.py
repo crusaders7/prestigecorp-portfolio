@@ -2,12 +2,13 @@
 """
 Google CSE News Search API - Vercel Serverless Function
 Powered by Google Custom Search Engine for reliable news results
-Updated: September 3, 2025 - Fixed function invocation
+Updated: September 3, 2025 - Fixed for Vercel BaseHTTPRequestHandler
 """
 
 import json
 import os
 from datetime import datetime
+from http.server import BaseHTTPRequestHandler
 
 # Try to import Google CSE modules
 try:
@@ -28,95 +29,73 @@ except ImportError:
         PROTECTION_AVAILABLE = False
 
 
-def handler(request, response):
+class handler(BaseHTTPRequestHandler):
     """Vercel serverless function handler"""
     
-    # Handle CORS preflight
-    if request.method == 'OPTIONS':
-        response.status_code = 200
-        response.headers.update({
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-        })
-        return ''
+    def do_OPTIONS(self):
+        """Handle CORS preflight requests"""
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
     
-    # Only allow POST requests
-    if request.method != 'POST':
-        response.status_code = 405
-        response.headers.update({
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-        })
-        return json.dumps({
-            'error': 'Method not allowed. Use POST.',
-            'status': 405,
-            'timestamp': datetime.now().isoformat()
-        })
-    
-    try:
-        # Parse request data
-        if hasattr(request, 'get_json'):
-            data = request.get_json() or {}
-        else:
-            # Handle raw request body
-            import io
-            if hasattr(request, 'body'):
-                body = request.body
-            elif hasattr(request, 'data'):
-                body = request.data
-            else:
-                body = b'{}'
+    def do_POST(self):
+        """Handle POST requests for search"""
+        try:
+            # Read request body
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
             
-            if isinstance(body, str):
-                body = body.encode('utf-8')
-            
+            # Parse JSON data
             try:
-                data = json.loads(body.decode('utf-8'))
+                data = json.loads(post_data.decode('utf-8'))
             except (json.JSONDecodeError, UnicodeDecodeError):
-                data = {}
+                self._send_error(400, 'Invalid JSON in request body')
+                return
+            
+            # Extract search parameters
+            query = data.get('query', '').strip()
+            sources = data.get('sources', [])
+            max_results = data.get('max_results', 10)
+            
+            if not query:
+                self._send_error(400, 'Query parameter is required')
+                return
+            
+            # Perform search
+            search_results = search_news(query, sources, max_results)
+            
+            # Send successful response
+            self._send_json_response(200, search_results)
+            
+        except Exception as e:
+            self._send_error(500, f'Internal server error: {str(e)}')
+    
+    def do_GET(self):
+        """Handle GET requests - not allowed"""
+        self._send_error(405, 'Method not allowed. Use POST.')
+    
+    def _send_json_response(self, status_code, data):
+        """Send JSON response with proper headers"""
+        response_data = json.dumps(data, ensure_ascii=False)
         
-        # Extract search parameters
-        query = data.get('query', '').strip()
-        sources = data.get('sources', [])
-        max_results = data.get('max_results', 10)
+        self.send_response(status_code)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
         
-        if not query:
-            response.status_code = 400
-            response.headers.update({
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-            })
-            return json.dumps({
-                'error': 'Query parameter is required',
-                'status': 400,
-                'timestamp': datetime.now().isoformat()
-            })
-        
-        # Perform search
-        search_results = search_news(query, sources, max_results)
-        
-        # Send response
-        response.status_code = 200
-        response.headers.update({
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-        })
-        
-        return json.dumps(search_results, ensure_ascii=False)
-        
-    except Exception as e:
-        response.status_code = 500
-        response.headers.update({
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-        })
-        
-        return json.dumps({
-            'error': f'Internal server error: {str(e)}',
-            'status': 500,
+        self.wfile.write(response_data.encode('utf-8'))
+    
+    def _send_error(self, status_code, message):
+        """Send error response"""
+        error_data = {
+            'error': message,
+            'status': status_code,
             'timestamp': datetime.now().isoformat()
-        })
+        }
+        self._send_json_response(status_code, error_data)
+
 
 def search_news(query, sources, max_results):
     """Search for news using Google Custom Search Engine"""
@@ -224,35 +203,19 @@ def search_news(query, sources, max_results):
                     'articles': [],
                     'urls': [],
                     'sources_searched': [],
-                    'error': f'Direct CSE error: {str(direct_error)}',
+                    'error': f'Google CSE API error: {str(direct_error)}',
                     'timestamp': datetime.now().isoformat()
                 }
         
-        # Format response
+        # Process results
+        urls = [article['url'] for article in articles]
+        
         return {
             'query': query,
             'found': len(articles),
             'articles': articles,
-            'urls': [article['url'] for article in articles],
+            'urls': urls,
             'sources_searched': ['Google CSE'],
-            'timestamp': datetime.now().isoformat(),
-            'cost_estimate': f'${len(articles) * 0.005:.3f}' if articles else '$0.000'
-        }
-        
-    except HttpError as e:
-        try:
-            error_details = json.loads(e.content.decode()) if e.content else {}
-            error_message = error_details.get('error', {}).get('message', str(e))
-        except:
-            error_message = str(e)
-        
-        return {
-            'query': query,
-            'found': 0,
-            'articles': [],
-            'urls': [],
-            'sources_searched': [],
-            'error': f'Google CSE HTTP error: {error_message}',
             'timestamp': datetime.now().isoformat()
         }
         
@@ -263,6 +226,6 @@ def search_news(query, sources, max_results):
             'articles': [],
             'urls': [],
             'sources_searched': [],
-            'error': f'Search error: {str(e)}',
+            'error': f'Search operation failed: {str(e)}',
             'timestamp': datetime.now().isoformat()
         }

@@ -2,92 +2,71 @@ import json
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
+from http.server import BaseHTTPRequestHandler
 
 
-def handler(request, response):
+class handler(BaseHTTPRequestHandler):
     """Vercel serverless function handler for article scraping"""
     
-    # Handle CORS preflight
-    if request.method == 'OPTIONS':
-        response.status_code = 200
-        response.headers.update({
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-        })
-        return ''
+    def do_OPTIONS(self):
+        """Handle CORS preflight requests"""
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
     
-    # Only allow POST requests
-    if request.method != 'POST':
-        response.status_code = 405
-        response.headers.update({
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-        })
-        return json.dumps({
-            'error': 'Method not allowed. Use POST.',
-            'status': 405,
-            'timestamp': datetime.now().isoformat()
-        })
-    
-    try:
-        # Parse request data
-        if hasattr(request, 'get_json'):
-            data = request.get_json() or {}
-        else:
-            # Handle raw request body
-            if hasattr(request, 'body'):
-                body = request.body
-            elif hasattr(request, 'data'):
-                body = request.data
-            else:
-                body = b'{}'
+    def do_POST(self):
+        """Handle POST requests for scraping"""
+        try:
+            # Read request body
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
             
-            if isinstance(body, str):
-                body = body.encode('utf-8')
-            
+            # Parse JSON data
             try:
-                data = json.loads(body.decode('utf-8'))
+                data = json.loads(post_data.decode('utf-8'))
             except (json.JSONDecodeError, UnicodeDecodeError):
-                data = {}
+                self._send_error(400, 'Invalid JSON in request body')
+                return
+            
+            urls = data.get('urls', [])
+            if not urls or not isinstance(urls, list):
+                self._send_error(400, 'No URLs provided or URLs not in list format')
+                return
+            
+            # Scrape articles
+            results = scrape_articles(urls)
+            
+            # Send successful response
+            self._send_json_response(200, results)
+            
+        except Exception as e:
+            self._send_error(500, f'Internal server error: {str(e)}')
+    
+    def do_GET(self):
+        """Handle GET requests - not allowed"""
+        self._send_error(405, 'Method not allowed. Use POST.')
+    
+    def _send_json_response(self, status_code, data):
+        """Send JSON response with proper headers"""
+        response_data = json.dumps(data, ensure_ascii=False)
         
-        urls = data.get('urls', [])
-        if not urls or not isinstance(urls, list):
-            response.status_code = 400
-            response.headers.update({
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-            })
-            return json.dumps({
-                'error': 'No URLs provided or URLs not in list format',
-                'status': 400,
-                'timestamp': datetime.now().isoformat()
-            })
+        self.send_response(status_code)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
         
-        # Scrape articles
-        results = scrape_articles(urls)
-        
-        # Send response
-        response.status_code = 200
-        response.headers.update({
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-        })
-        
-        return json.dumps(results, ensure_ascii=False)
-        
-    except Exception as e:
-        response.status_code = 500
-        response.headers.update({
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-        })
-        
-        return json.dumps({
-            'error': f'Internal server error: {str(e)}',
-            'status': 500,
+        self.wfile.write(response_data.encode('utf-8'))
+    
+    def _send_error(self, status_code, message):
+        """Send error response"""
+        error_data = {
+            'error': message,
+            'status': status_code,
             'timestamp': datetime.now().isoformat()
-        })
+        }
+        self._send_json_response(status_code, error_data)
 
 
 def scrape_articles(urls):
@@ -199,314 +178,73 @@ def scrape_articles(urls):
                             break
             
             # Enhanced date extraction
-            date_text = json_ld_date if json_ld_date else ''
-            if not date_text:
+            date_text = ''
+            if json_ld_date:
+                date_text = json_ld_date
+            else:
                 date_selectors = [
                     'meta[property="article:published_time"]',
                     'meta[name="date"]',
-                    'meta[name="publish-date"]',
                     'time[datetime]',
-                    '.date', '.publish-date', '.article-date'
+                    '.published-date',
+                    '.article-date',
+                    '.date'
                 ]
-                
                 for selector in date_selectors:
-                    date_elem = soup.select_one(selector)
-                    if date_elem:
+                    elem = soup.select_one(selector)
+                    if elem:
                         if selector.startswith('meta'):
-                            date_text = date_elem.get('content', '')
-                        elif selector == 'time[datetime]':
-                            date_text = date_elem.get('datetime', '')
+                            date_text = elem.get('content', '')
+                        elif elem.name == 'time':
+                            date_text = elem.get('datetime', '') or elem.get_text(strip=True)
                         else:
-                            date_text = date_elem.get_text(strip=True)
+                            date_text = elem.get_text(strip=True)
                         if date_text:
                             break
             
-            if content_found and len(content) > 50:
-                article_data = {
-                    'url': url,
-                    'title': title_text or f'Article {i+1}',
-                    'content': content,
-                    'content_length': len(content),
-                    'date': date_text,
-                    'scraped_at': datetime.now().isoformat(),
-                    'source': 'web_scraping'
-                }
-                results.append(article_data)
+            # Create article result
+            article_result = {
+                'url': url,
+                'title': title_text or f'Article from {url}',
+                'content': content if content_found else 'Content extraction failed',
+                'content_length': len(content) if content_found else 0,
+                'date': date_text,
+                'scraped_at': datetime.now().isoformat(),
+                'success': content_found
+            }
+            
+            results.append(article_result)
+            if content_found:
                 scraped_count += 1
-            else:
-                # Add error entry for failed scraping
-                results.append({
-                    'url': url,
-                    'error': 'Could not extract sufficient content',
-                    'scraped_at': datetime.now().isoformat()
-                })
                 
         except requests.RequestException as e:
+            # Network/HTTP errors
             results.append({
                 'url': url,
-                'error': f'Request failed: {str(e)}',
-                'scraped_at': datetime.now().isoformat()
+                'title': f'Error accessing {url}',
+                'content': f'Network error: {str(e)}',
+                'content_length': 0,
+                'date': '',
+                'scraped_at': datetime.now().isoformat(),
+                'success': False,
+                'error': str(e)
             })
         except Exception as e:
+            # Other errors
             results.append({
                 'url': url,
-                'error': f'Scraping error: {str(e)}',
-                'scraped_at': datetime.now().isoformat()
+                'title': f'Error processing {url}',
+                'content': f'Processing error: {str(e)}',
+                'content_length': 0,
+                'date': '',
+                'scraped_at': datetime.now().isoformat(),
+                'success': False,
+                'error': str(e)
             })
-    
-    # Separate successful articles from errors
-    articles = [r for r in results if 'content' in r]
-    errors = [r for r in results if 'error' in r]
     
     return {
+        'articles': results,
         'scraped': scraped_count,
-        'total_requested': len(urls),
-        'articles': articles,
-        'errors': errors,
+        'total': len(urls),
         'timestamp': datetime.now().isoformat()
     }
-
-                        content = ''
-                        content_found = False
-                        
-                        # Try each selector until we find substantial content
-                        for selector in content_selectors:
-                            try:
-                                content_div = soup.select_one(selector)
-                                if content_div:
-                                    # Method 1: Extract text from paragraphs only
-                                    paragraphs = content_div.find_all('p')
-                                    paragraph_texts = []
-                                    
-                                    for p in paragraphs:
-                                        text = p.get_text(strip=True)
-                                        # Skip subscription notices, ads, and navigation
-                                        if (text and len(text) > 50 and 
-                                            not any(skip_word in text.lower() for skip_word in [
-                                                'your digital subscription', 'access unlimited content',
-                                                'today\'s paper', 'subscribe', 'subscription', 'sign up',
-                                                'newsletter', 'follow us', 'share this', 'read more',
-                                                'click here', 'advertisement', 'sponsored', 'related articles',
-                                                'more stories', 'breaking news', 'latest news', 'trending'
-                                            ])):
-                                            paragraph_texts.append(text)
-                                    
-                                    if paragraph_texts:
-                                        content = ' '.join(paragraph_texts)
-                                        
-                                    # Method 2: If paragraphs don't give enough, try all text
-                                    if len(content) < 200:
-                                        # Remove unwanted elements first
-                                        for unwanted in content_div.find_all(['script', 'style', 'nav', 'header', 'footer', 'aside', 'form']):
-                                            unwanted.decompose()
-                                        
-                                        # Remove subscription boxes
-                                        for sub_box in content_div.find_all(attrs={'class': lambda x: x and any(word in ' '.join(x).lower() for word in ['subscribe', 'subscription', 'paywall', 'premium'])}):
-                                            sub_box.decompose()
-                                        
-                                        full_text = content_div.get_text(separator=' ', strip=True)
-                                        
-                                        # Clean up the text
-                                        lines = full_text.split('.')
-                                        clean_lines = []
-                                        
-                                        for line in lines:
-                                            line = line.strip()
-                                            if (len(line) > 30 and 
-                                                not any(skip in line.lower() for skip in [
-                                                    'digital subscription', 'unlimited content', 'today\'s paper',
-                                                    'subscribe', 'newsletter', 'breaking news', 'latest news'
-                                                ])):
-                                                clean_lines.append(line)
-                                        
-                                        if clean_lines and len(' '.join(clean_lines)) > len(content):
-                                            content = '. '.join(clean_lines)
-                                    
-                                    # If we found substantial content (more than 300 chars), use it
-                                    if len(content) > 300:
-                                        print(f"Found content using selector: {selector} ({len(content)} chars)")
-                                        content_found = True
-                                        break
-                                    elif len(content) > 100:
-                                        print(f"Found partial content using selector: {selector} ({len(content)} chars)")
-                                        # Continue looking but keep this as backup
-                                        
-                            except Exception as selector_error:
-                                print(f"Error with selector {selector}: {selector_error}")
-                                continue
-
-                        # Enhanced fallback methods if no content found
-                        if not content_found or len(content) < 200:
-                            print("Using enhanced fallback content extraction methods")
-                            
-                            # Fallback 1: Look for any div with substantial paragraph content
-                            all_divs = soup.find_all('div')
-                            best_content = ''
-                            
-                            for div in all_divs:
-                                div_paragraphs = div.find_all('p', recursive=False)
-                                if len(div_paragraphs) >= 3:  # At least 3 paragraphs
-                                    div_text = ' '.join([p.get_text(strip=True) for p in div_paragraphs[:8]])
-                                    # Skip if it contains subscription text
-                                    if (len(div_text) > 500 and 
-                                        'digital subscription' not in div_text.lower() and
-                                        'unlimited content' not in div_text.lower()):
-                                        if len(div_text) > len(best_content):
-                                            best_content = div_text
-                            
-                            if len(best_content) > len(content):
-                                content = best_content
-                                print(f"Used div fallback: {len(content)} chars")
-                            
-                            # Fallback 2: Get all paragraphs from the entire page (more selective)
-                            if len(content) < 200:
-                                all_paragraphs = soup.find_all('p')
-                                good_paragraphs = []
-                                
-                                for p in all_paragraphs:
-                                    text = p.get_text(strip=True)
-                                    if (len(text) > 80 and  # Longer minimum
-                                        not any(skip in text.lower() for skip in [
-                                            'cookie', 'subscribe', 'newsletter', 'advertisement',
-                                            'digital subscription', 'unlimited content', 'today\'s paper',
-                                            'follow us', 'share this', 'latest news', 'breaking news'
-                                        ])):
-                                        good_paragraphs.append(text)
-                                    if len(good_paragraphs) >= 6:  # Limit to avoid too much content
-                                        break
-                                
-                                if good_paragraphs:
-                                    fallback_content = ' '.join(good_paragraphs)
-                                    if len(fallback_content) > len(content):
-                                        content = fallback_content
-                                        print(f"Used paragraph fallback: {len(content)} chars")
-                            
-                            # Fallback 3: Meta description as last resort
-                            if len(content) < 100:
-                                meta_desc = soup.find('meta', attrs={'name': 'description'})
-                                if meta_desc:
-                                    content = meta_desc.get('content', '')
-                                    print(f"Used meta description: {len(content)} chars")
-
-                    # Ensure content is a string
-                    if not isinstance(content, str):
-                        content = str(content)
-
-                    # Enhanced date extraction
-                    date_str = ''
-                    
-                    # PRIORITY 1: Use JSON-LD date if available
-                    if json_ld_date:
-                        date_str = json_ld_date
-                        print(f"Using JSON-LD date: {date_str}")
-                    else:
-                        # Method 1: Look for time elements with datetime attribute
-                        time_elements = soup.find_all('time')
-                        for time_elem in time_elements:
-                            if time_elem.get('datetime'):
-                                date_str = time_elem.get('datetime')
-                                break
-                            elif time_elem.get_text(strip=True):
-                                date_str = time_elem.get_text(strip=True)
-                                break
-                        
-                        # Method 2: Try various meta tags for date
-                        if not date_str:
-                            date_meta_selectors = [
-                                ('meta', {'name': 'pubdate'}),
-                                ('meta', {'property': 'article:published_time'}),
-                                ('meta', {'name': 'article:published_time'}),
-                                ('meta', {'property': 'article:published'}),
-                                ('meta', {'name': 'date'}),
-                                ('meta', {'property': 'og:updated_time'}),
-                                ('meta', {'name': 'created'}),
-                                ('meta', {'itemprop': 'datePublished'}),
-                                ('meta', {'itemprop': 'dateCreated'})
-                            ]
-                            
-                            for tag, attrs in date_meta_selectors:
-                                meta_tag = soup.find(tag, attrs=attrs)
-                                if meta_tag and meta_tag.get('content'):
-                                    date_str = meta_tag.get('content')
-                                    break
-                        
-                        # Method 3: Look for date in common CSS classes
-                        if not date_str:
-                            date_selectors = [
-                                '.published-date',
-                                '.post-date', 
-                                '.article-date',
-                                '.entry-date',
-                                '.date',
-                                '.timestamp',
-                                '.publish-date',
-                                '[class*="date"]',
-                                '[class*="time"]'
-                            ]
-                            
-                            for selector in date_selectors:
-                                date_elem = soup.select_one(selector)
-                                if date_elem:
-                                    date_text = date_elem.get_text(strip=True)
-                                    if date_text and len(date_text) < 50:  # Reasonable date length
-                                        date_str = date_text
-                                        break
-
-                    results.append({
-                        'url': url,
-                        'title': title_text if title_text else 'No title found',
-                        'date': date_str,
-                        'content': content,  # Return full content without truncation
-                        'content_length': len(content)  # Add content length for reference
-                    })
-                    scraped_count += 1
-
-                except requests.exceptions.Timeout:
-                    print(f"Timeout scraping: {url}")
-                    results.append({'url': url, 'error': 'Request timeout'})
-                except requests.exceptions.ConnectionError:
-                    print(f"Connection error scraping: {url}")
-                    results.append({'url': url, 'error': 'Connection error'})
-                except requests.exceptions.HTTPError as e:
-                    print(
-                        f"HTTP error {e.response.status_code} scraping: {url}")
-                    results.append(
-                        {'url': url, 'error': f'HTTP {e.response.status_code} error'})
-                except Exception as e:
-                    print(f"Error scraping {url}: {type(e).__name__}: {e}")
-                    results.append({'url': url, 'error': str(e)})
-
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            response = {
-                'scraped': scraped_count,
-                'total': len(urls),
-                'articles': [r for r in results if 'error' not in r],
-                'errors': [r for r in results if 'error' in r]
-            }
-            self.wfile.write(json.dumps(response).encode())
-
-        except Exception as e:
-            print(f"Unexpected error in scrape do_POST: {e}")
-            self.send_error_response(500, f'Internal server error: {str(e)}')
-
-    def send_error_response(self, code, message):
-        try:
-            self.send_response(code)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            error_response = {'error': message}
-            self.wfile.write(json.dumps(error_response).encode())
-        except Exception as e:
-            print(f"Failed to send error response: {e}")
-            try:
-                self.send_response(500)
-                self.send_header('Content-type', 'text/plain')
-                self.end_headers()
-                self.wfile.write(b'Internal server error')
-            except:
-                print(
-                    f"Critical error - unable to send any response: {message}")
