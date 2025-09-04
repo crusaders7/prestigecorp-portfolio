@@ -1,36 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Site Audit Tool - Test</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%); }
-        .btn-primary { 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white; padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer;
+        body {
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
         }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+        }
+
         .audit-input {
-            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px; padding: 12px; color: #ffffff; width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            color: #ffffff;
+            width: 100%;
         }
     </style>
 </head>
+
 <body class="text-white min-h-screen flex items-center justify-center">
     <div class="max-w-2xl mx-auto p-8">
         <h1 class="text-4xl font-bold mb-8 text-center">Site Audit Tool - Test</h1>
-        
+
         <div class="space-y-4">
             <div>
                 <label class="block mb-2">Website URL:</label>
                 <input type="url" id="websiteUrl" placeholder="https://example.com" class="audit-input">
             </div>
-            
+
             <button onclick="testAudit()" class="btn-primary w-full">
                 🔍 Run Audit Test
             </button>
-            
+
             <div id="status" class="mt-4 p-4 rounded bg-gray-800 hidden"></div>
             <div id="results" class="mt-4 p-4 rounded bg-gray-800 hidden"></div>
         </div>
@@ -41,36 +55,36 @@
             const url = document.getElementById('websiteUrl').value.trim();
             const statusDiv = document.getElementById('status');
             const resultsDiv = document.getElementById('results');
-            
+
             // Show status
             statusDiv.classList.remove('hidden');
             resultsDiv.classList.add('hidden');
             statusDiv.innerHTML = '<div class="text-blue-400">🧪 Testing audit functionality...</div>';
-            
+
             if (!url) {
                 statusDiv.innerHTML = '<div class="text-red-400">❌ Please enter a URL</div>';
                 return;
             }
-            
+
             try {
                 // Test 1: Direct API call (simulated)
                 statusDiv.innerHTML += '<div class="text-yellow-400">📡 Testing API call...</div>';
-                
+
                 // Since we're testing locally, let's try different API bases
                 const possibleBases = [
                     'http://localhost:3000',
-                    'http://127.0.0.1:3000', 
+                    'http://127.0.0.1:3000',
                     window.location.origin,
                     ''  // Relative path
                 ];
-                
+
                 let success = false;
                 let lastError = null;
-                
+
                 for (const base of possibleBases) {
                     try {
                         statusDiv.innerHTML += `<div class="text-gray-400">Trying: ${base || 'relative path'}</div>`;
-                        
+
                         const apiUrl = base ? `${base}/api/audit` : '/api/audit';
                         const response = await fetch(apiUrl, {
                             method: 'POST',
@@ -78,11 +92,11 @@
                             body: JSON.stringify({ url: url }),
                             timeout: 10000
                         });
-                        
+
                         if (response.ok) {
                             const data = await response.json();
                             statusDiv.innerHTML += '<div class="text-green-400">✅ API call successful!</div>';
-                            
+
                             resultsDiv.classList.remove('hidden');
                             resultsDiv.innerHTML = `
                                 <h3 class="text-xl font-bold mb-4 text-green-400">✅ Audit Results</h3>
@@ -107,14 +121,14 @@
                         statusDiv.innerHTML += `<div class="text-red-400">❌ ${base || 'relative'}: ${e.message}</div>`;
                     }
                 }
-                
+
                 if (!success) {
                     throw lastError || new Error('All API endpoints failed');
                 }
-                
+
             } catch (error) {
                 statusDiv.innerHTML += `<div class="text-red-400">💥 Error: ${error.message}</div>`;
-                
+
                 // Show debugging info
                 resultsDiv.classList.remove('hidden');
                 resultsDiv.innerHTML = `
@@ -135,21 +149,22 @@
                 `;
             }
         }
-        
+
         // Test on load
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const statusDiv = document.getElementById('status');
             statusDiv.classList.remove('hidden');
             statusDiv.innerHTML = `
                 <div class="text-blue-400">🌐 Page loaded successfully!</div>
                 <div class="text-gray-400">Current origin: ${window.location.origin}</div>
                 <div class="text-gray-400">Protocol: ${window.location.protocol}</div>
-                ${window.location.protocol === 'file:' ? 
-                    '<div class="text-yellow-400">⚠️ File protocol detected - you need to serve this from a web server!</div>' : 
+                ${window.location.protocol === 'file:' ?
+                    '<div class="text-yellow-400">⚠️ File protocol detected - you need to serve this from a web server!</div>' :
                     '<div class="text-green-400">✅ HTTP protocol detected - should work!</div>'
                 }
             `;
         });
     </script>
 </body>
+
 </html>
