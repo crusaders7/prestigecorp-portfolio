@@ -285,12 +285,27 @@
             position: relative;
             overflow: hidden;
             backdrop-filter: blur(15px);
+            width: 100%;
+            box-sizing: border-box;
+            flex-shrink: 0;
         }
 
         .article-card:hover {
-            transform: translateY(-5px) scale(1.02);
+            transform: translateY(-3px);
             border-color: rgba(102, 126, 234, 0.4);
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Prevent layout shifts on content expansion */
+        #articlesList {
+            contain: layout;
+        }
+
+        /* Ensure article content containers don't affect parent sizing */
+        [id^="article-content-"] {
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         /* Enhanced loading animation */
@@ -743,7 +758,7 @@
                                     </button>
                                 </div>
                             </div>
-                            <div id="articlesList" class="space-y-4 max-h-96 overflow-y-auto custom-scrollbar"></div>
+                            <div id="articlesList" class="space-y-4 max-h-96 overflow-y-auto custom-scrollbar w-full"></div>
                         </div>
                     </div>
 
