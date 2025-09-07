@@ -1,0 +1,93 @@
+.
+├── DEPLOY-INSTRUCTIONS.md
+├── GOOGLE-CSE-DEPLOY.md
+├── Pipfile
+├── api
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   └── __init__.cpython-312.pyc
+│   ├── api_usage.json
+│   ├── debug.py
+│   ├── deployment_diagnostics.py
+│   ├── download.py
+│   ├── minimal.py
+│   ├── news-download.py
+│   ├── news-scrape.py
+│   ├── news-search.py
+│   ├── protected_cse.py
+│   ├── protection_config.json
+│   ├── scrape.py
+│   ├── search.py
+│   └── test.py
+├── ddg_response.html
+├── deploy_helper.py
+├── deployment_diagnostic.py
+├── find_vercel_domain.py
+├── fix_read_full_article.py
+├── fix_read_full_article_v2.py
+├── fix_target_blank.py
+├── fresh-news-deployment
+│   ├── api
+│   │   ├── __init__.py
+│   │   ├── download.py
+│   │   ├── protected_cse.py
+│   │   ├── scrape.py
+│   │   └── search.py
+│   ├── final_test.py
+│   ├── index.html
+│   ├── index.html.backup3
+│   ├── index.html.bak2
+│   ├── prestigecorp-logo.png
+│   ├── requirements.txt
+│   ├── test_deployment.py
+│   ├── test_pagination.py
+│   ├── test_search.py
+│   └── vercel.json
+├── fresh_deployment_setup.py
+├── government_network_fix.md
+├── index-old.html
+├── index.html
+├── index.html.bak
+├── news-scraper-deployment.zip
+├── portfolio.html
+├── projects
+│   └── newspaperscraper
+│       ├── README.md
+│       ├── api
+│       ├── index.html
+│       ├── news-scraper-deployment
+│       ├── requirements.txt
+│       └── vercel.json
+├── repo-structure.txt
+├── requirements-news-scraper.txt
+├── requirements.txt
+├── site-audit-tool
+│   ├── api
+│   │   └── audit.py
+│   ├── index.html
+│   ├── requirements.txt
+│   ├── test-simple.html
+│   ├── test_audit.py
+│   └── vercel.json
+├── strategy_performance_tester.py
+├── test.html
+├── test_api.py
+├── test_api2.py
+├── test_deployment.py
+├── test_endpoints.py
+├── test_enhanced_scraping.py
+├── test_error_case.py
+├── test_frontend_format.py
+├── test_full_workflow.py
+├── test_multiple.py
+├── test_news_domain.py
+├── test_sequential_strategies.py
+├── test_vercel_deployment.py
+├── vercel-news-scraper.json
+├── vercel.json
+├── vercel_fix_guide.py
+├── verify_articles.py
+├── verify_fix.py
+└── verify_read_full_article_fix.py
+
+10 directories, 80 files
