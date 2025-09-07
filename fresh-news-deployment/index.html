@@ -22,83 +22,313 @@
         }
 
         /* Utility Classes */
-        .container { max-width: 1200px; margin: 0 auto; }
-        .px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
-        .py-4 { padding-top: 1rem; padding-bottom: 1rem; }
-        .py-8 { padding-top: 2rem; padding-bottom: 2rem; }
-        .py-16 { padding-top: 4rem; padding-bottom: 4rem; }
-        .mb-3 { margin-bottom: 0.75rem; }
-        .mb-4 { margin-bottom: 1rem; }
-        .mb-6 { margin-bottom: 1.5rem; }
-        .mb-8 { margin-bottom: 2rem; }
-        .mr-2 { margin-right: 0.5rem; }
-        .mr-3 { margin-right: 0.75rem; }
-        .text-center { text-align: center; }
-        .text-white { color: var(--gray-900); }
-        .text-gray-300 { color: var(--gray-600); }
-        .text-gray-400 { color: var(--gray-500); }
-        .text-indigo-400 { color: var(--primary-color); }
-        .text-purple-400 { color: var(--primary-color); }
-        .bg-black { background-color: #000000; }
-        .flex { display: flex; }
-        .items-center { align-items: center; }
-        .justify-between { justify-content: space-between; }
-        .justify-center { justify-content: center; }
-        .space-x-2 > * + * { margin-left: 0.5rem; }
-        .space-x-8 > * + * { margin-left: 2rem; }
-        .w-10 { width: 2.5rem; }
-        .h-10 { height: 2.5rem; }
-        .w-8 { width: 2rem; }
-        .h-8 { height: 2rem; }
-        .rounded-xl { border-radius: 0.75rem; }
-        .rounded-lg { border-radius: 0.5rem; }
-        .font-bold { font-weight: 700; }
-        .font-semibold { font-weight: 600; }
-        .font-medium { font-weight: 500; }
-        .text-xl { font-size: 1.25rem; }
-        .text-lg { font-size: 1.125rem; }
-        .text-sm { font-size: 0.875rem; }
-        .text-xs { font-size: 0.75rem; }
-        .hidden { display: none; }
-        .fixed { position: fixed; }
-        .w-full { width: 100%; }
-        .z-30 { z-index: 30; }
-        .pt-24 { padding-top: 6rem; }
-        .pb-20 { padding-bottom: 5rem; }
-        .max-w-6xl { max-width: 72rem; }
-        .max-w-7xl { max-width: 80rem; }
-        .mx-auto { margin-left: auto; margin-right: auto; }
-        .grid { display: grid; }
-        .gap-4 { gap: 1rem; }
-        .gap-6 { gap: 1.5rem; }
-        .gap-8 { gap: 2rem; }
-        .transition { transition-property: all; transition-duration: 300ms; }
-        .cursor-pointer { cursor: pointer; }
-        .border { border-width: 1px; }
-        .rounded { border-radius: 0.25rem; }
-        .p-3 { padding: 0.75rem; }
-        .p-6 { padding: 1.5rem; }
-        .min-h-screen { min-height: 100vh; }
-        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .px-6 {
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+        }
+
+        .py-4 {
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+
+        .py-8 {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+
+        .py-16 {
+            padding-top: 4rem;
+            padding-bottom: 4rem;
+        }
+
+        .mb-3 {
+            margin-bottom: 0.75rem;
+        }
+
+        .mb-4 {
+            margin-bottom: 1rem;
+        }
+
+        .mb-6 {
+            margin-bottom: 1.5rem;
+        }
+
+        .mb-8 {
+            margin-bottom: 2rem;
+        }
+
+        .mr-2 {
+            margin-right: 0.5rem;
+        }
+
+        .mr-3 {
+            margin-right: 0.75rem;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-white {
+            color: var(--gray-900);
+        }
+
+        .text-gray-300 {
+            color: var(--gray-600);
+        }
+
+        .text-gray-400 {
+            color: var(--gray-500);
+        }
+
+        .text-indigo-400 {
+            color: var(--primary-color);
+        }
+
+        .text-purple-400 {
+            color: var(--primary-color);
+        }
+
+        .bg-black {
+            background-color: #000000;
+        }
+
+        .flex {
+            display: flex;
+        }
+
+        .items-center {
+            align-items: center;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        .justify-center {
+            justify-content: center;
+        }
+
+        .space-x-2>*+* {
+            margin-left: 0.5rem;
+        }
+
+        .space-x-8>*+* {
+            margin-left: 2rem;
+        }
+
+        .w-10 {
+            width: 2.5rem;
+        }
+
+        .h-10 {
+            height: 2.5rem;
+        }
+
+        .w-8 {
+            width: 2rem;
+        }
+
+        .h-8 {
+            height: 2rem;
+        }
+
+        .rounded-xl {
+            border-radius: 0.75rem;
+        }
+
+        .rounded-lg {
+            border-radius: 0.5rem;
+        }
+
+        .font-bold {
+            font-weight: 700;
+        }
+
+        .font-semibold {
+            font-weight: 600;
+        }
+
+        .font-medium {
+            font-weight: 500;
+        }
+
+        .text-xl {
+            font-size: 1.25rem;
+        }
+
+        .text-lg {
+            font-size: 1.125rem;
+        }
+
+        .text-sm {
+            font-size: 0.875rem;
+        }
+
+        .text-xs {
+            font-size: 0.75rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .fixed {
+            position: fixed;
+        }
+
+        .w-full {
+            width: 100%;
+        }
+
+        .z-30 {
+            z-index: 30;
+        }
+
+        .pt-24 {
+            padding-top: 6rem;
+        }
+
+        .pb-20 {
+            padding-bottom: 5rem;
+        }
+
+        .max-w-6xl {
+            max-width: 72rem;
+        }
+
+        .max-w-7xl {
+            max-width: 80rem;
+        }
+
+        .mx-auto {
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .grid {
+            display: grid;
+        }
+
+        .gap-4 {
+            gap: 1rem;
+        }
+
+        .gap-6 {
+            gap: 1.5rem;
+        }
+
+        .gap-8 {
+            gap: 2rem;
+        }
+
+        .transition {
+            transition-property: all;
+            transition-duration: 300ms;
+        }
+
+        .cursor-pointer {
+            cursor: pointer;
+        }
+
+        .border {
+            border-width: 1px;
+        }
+
+        .rounded {
+            border-radius: 0.25rem;
+        }
+
+        .p-3 {
+            padding: 0.75rem;
+        }
+
+        .p-6 {
+            padding: 1.5rem;
+        }
+
+        .min-h-screen {
+            min-height: 100vh;
+        }
+
         /* Icon replacements using Unicode symbols */
-        .icon-newspaper::before { content: "📰"; }
-        .icon-search::before { content: "🔍"; }
-        .icon-magic::before { content: "✨"; }
-        .icon-download::before { content: "⬇️"; }
-        .icon-check::before { content: "✅"; }
-        .icon-bolt::before { content: "⚡"; }
-        .icon-play::before { content: "▶️"; }
-        .icon-settings::before { content: "⚙️"; }
-        .icon-list::before { content: "📋"; }
-        .icon-globe::before { content: "🌐"; }
-        .icon-file::before { content: "📄"; }
-        .icon-calendar::before { content: "📅"; }
-        .icon-external::before { content: "🔗"; }
-        .icon-github::before { content: "🔗"; }
-        .icon-arrow-left::before { content: "←"; }
-        .icon-chevron-down::before { content: "▼"; }
-        .icon-menu::before { content: "☰"; }
-        .icon-close::before { content: "✕"; }
+        .icon-newspaper::before {
+            content: "📰";
+        }
+
+        .icon-search::before {
+            content: "🔍";
+        }
+
+        .icon-magic::before {
+            content: "✨";
+        }
+
+        .icon-download::before {
+            content: "⬇️";
+        }
+
+        .icon-check::before {
+            content: "✅";
+        }
+
+        .icon-bolt::before {
+            content: "⚡";
+        }
+
+        .icon-play::before {
+            content: "▶️";
+        }
+
+        .icon-settings::before {
+            content: "⚙️";
+        }
+
+        .icon-list::before {
+            content: "📋";
+        }
+
+        .icon-globe::before {
+            content: "🌐";
+        }
+
+        .icon-file::before {
+            content: "📄";
+        }
+
+        .icon-calendar::before {
+            content: "📅";
+        }
+
+        .icon-external::before {
+            content: "🔗";
+        }
+
+        .icon-github::before {
+            content: "🔗";
+        }
+
+        .icon-arrow-left::before {
+            content: "←";
+        }
+
+        .icon-chevron-down::before {
+            content: "▼";
+        }
+
+        .icon-menu::before {
+            content: "☰";
+        }
+
+        .icon-close::before {
+            content: "✕";
+        }
 
         /* Clean minimal design variables */
         :root {
@@ -223,13 +453,6 @@
         /* Prevent layout shifts on content expansion */
         #articlesList {
             contain: layout;
-        }
-
-        /* Ensure article content containers don't affect parent sizing */
-        [id^="article-content-"] {
-            width: 100%;
-            max-width: 100%;
-            box-sizing: border-box;
         }
 
         /* Enhanced loading animation */
@@ -433,8 +656,10 @@
                     </div>
                 </div>
                 <nav class="hidden md:flex space-x-8 items-center">
-                    <a href="#demo" class="text-gray-600 hover:text-primary-color transition duration-200 font-medium">Demo</a>
-                    <a href="#features" class="text-gray-600 hover:text-primary-color transition duration-200 font-medium">Features</a>
+                    <a href="#demo"
+                        class="text-gray-600 hover:text-primary-color transition duration-200 font-medium">Demo</a>
+                    <a href="#features"
+                        class="text-gray-600 hover:text-primary-color transition duration-200 font-medium">Features</a>
                     <a href="https://github.com/crusaders7" target="_blank" rel="noopener noreferrer"
                         class="text-gray-600 hover:text-primary-color transition duration-200 font-medium">
                         GitHub
@@ -678,7 +903,8 @@
                                     </button>
                                 </div>
                             </div>
-                            <div id="articlesList" class="space-y-4 max-h-96 overflow-y-auto custom-scrollbar w-full"></div>
+                            <div id="articlesList" class="space-y-4 max-h-96 overflow-y-auto custom-scrollbar w-full">
+                            </div>
                         </div>
                     </div>
 
@@ -878,8 +1104,8 @@
                             </div>
 
                             <div class="mt-8 flex flex-wrap gap-4">
-                                <a href="https://github.com/crusaders7/newspaper-scraper" target="_blank" rel="noopener noreferrer"
-                                    class="btn-primary flex items-center">
+                                <a href="https://github.com/crusaders7/newspaper-scraper" target="_blank"
+                                    rel="noopener noreferrer" class="btn-primary flex items-center">
                                     <i class="fab fa-github mr-2"></i>
                                     View Source Code
                                 </a>
@@ -1471,6 +1697,24 @@
             }
         }
 
+        function toggleArticle(index) {
+            // Instead of toggling visibility in the same page, open in a new tab
+            openArticleInNewTab(index);
+        }
+
+        async function downloadArticles(format) {
+            const articles = await fetchArticles();
+            const blob = new Blob([formatArticles(articles, format)], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `articles.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
         function displayScrapedArticles() {
             const articlesList = document.getElementById('articlesList');
             const resultsCount = document.getElementById('resultsCount');
@@ -1519,25 +1763,7 @@
                         </button>
                     </div>
                     
-                    <div id="article-content-${index}" class="hidden mt-4 p-6 bg-black/30 rounded-xl border border-gray-600">
-                        <div class="prose prose-invert max-w-none">
-                            <div class="text-gray-200 leading-relaxed whitespace-pre-wrap text-base" style="line-height: 1.7;">
-                                ${article.content.replace(/\n\s*\n/g, '\n\n').replace(/\n/g, '\n\n')}
-                            </div>
-                        </div>
-                        <div class="mt-6 pt-4 border-t border-gray-600 flex justify-between items-center">
-                            <div class="flex items-center space-x-4 text-sm text-gray-400">
-                                <span><i class="fas fa-word mr-1"></i>~${Math.round((article.content_length || article.content.length) / 5)} words</span>
-                                <span><i class="fas fa-clock mr-1"></i>~${Math.round((article.content_length || article.content.length) / 1000)} min read</span>
-                            </div>
-                            <a href="${article.url}" target="_blank" rel="noopener noreferrer"
-                               class="inline-flex items-center text-indigo-400 hover:text-indigo-300 text-sm font-medium transition-colors">
-                                <i class="fas fa-link mr-1"></i>
-                                Original Source
-                                <i class="fas fa-external-link-alt ml-1 text-xs"></i>
-                            </a>
-                        </div>
-                    </div>
+                    <!-- Removed the hidden content div since we're opening in new tabs -->
                 </div>
             `).join('');
 
@@ -1546,21 +1772,8 @@
         }
 
         function toggleArticle(index) {
-            const contentDiv = document.getElementById(`article-content-${index}`);
-            const toggleBtn = document.getElementById(`toggle-btn-${index}`);
-
-            if (contentDiv.classList.contains('hidden')) {
-                contentDiv.classList.remove('hidden');
-                contentDiv.classList.add('slide-up');
-                toggleBtn.innerHTML = '<i class="fas fa-book mr-2"></i>Hide Article';
-                toggleBtn.classList.add('text-yellow-400');
-                toggleBtn.classList.remove('text-indigo-400');
-            } else {
-                contentDiv.classList.add('hidden');
-                toggleBtn.innerHTML = '<i class="fas fa-book-open mr-2"></i>Read Full Article';
-                toggleBtn.classList.add('text-indigo-400');
-                toggleBtn.classList.remove('text-yellow-400');
-            }
+            // Instead of toggling visibility in the same page, open in a new tab
+            openArticleInNewTab(index);
         }
 
         async function downloadArticles(format) {
@@ -1660,16 +1873,12 @@
                 }
             });
         });
-    
+
         function openArticleInNewTab(index) {
-            // Get the article content
-            const contentDiv = document.getElementById(`article-content-${index}`);
-            if (!contentDiv) return;
-            
             // Get the article data
             const article = scrapedArticles[index];
             if (!article) return;
-            
+
             // Create HTML content for the new window
             const newWindowContent = `
                 <!DOCTYPE html>
@@ -1693,6 +1902,7 @@
                         }
                         .article-content {
                             white-space: pre-wrap;
+                            font-size: 16px;
                         }
                         .article-meta {
                             color: #6b7280;
@@ -1701,31 +1911,60 @@
                             padding-top: 20px;
                             border-top: 1px solid #e5e7eb;
                         }
+                        .btn {
+                            display: inline-block;
+                            background: #2563eb;
+                            color: white;
+                            font-weight: 500;
+                            padding: 12px 24px;
+                            border-radius: 6px;
+                            border: none;
+                            cursor: pointer;
+                            text-decoration: none;
+                            margin: 10px 0;
+                        }
+                        .btn:hover {
+                            background: #1d4ed8;
+                        }
                     </style>
                 </head>
                 <body>
                     <div class="article-header">
                         <h1>${article.title || 'Untitled Article'}</h1>
                         <div class="article-meta">
-                            ${article.date ? `<div>Date: ${article.date}</div>` : ''}
-                            <div>Source: ${new URL(article.url).hostname}</div>
-                            <div>Length: ${(article.content_length || article.content.length).toLocaleString()} characters</div>
+                            ${article.date ? `<div><strong>Date:</strong> ${article.date}</div>` : ''}
+                            <div><strong>Source:</strong> ${new URL(article.url).hostname}</div>
+                            <div><strong>Length:</strong> ${(article.content_length || article.content.length).toLocaleString()} characters</div>
                         </div>
+                        <a href="${article.url}" target="_blank" rel="noopener noreferrer" class="btn">
+                            View Original Source
+                        </a>
                     </div>
-                    <div class="article-content">${article.content.replace(/
-/g, '<br>')}</div>
-                    <div class="article-meta">
-                        <a href="${article.url}" target="_blank" rel="noopener noreferrer">View Original Source</a>
+                    <div class="article-content">${article.content.replace(/\n/g, '<br>')}</div>
+                    <div style="margin-top: 30px; text-align: center;">
+                        <a href="${article.url}" target="_blank" rel="noopener noreferrer" class="btn">
+                            View Original Source
+                        </a>
                     </div>
                 </body>
                 </html>
             `;
+
+            // Open in new window/tab with appropriate dimensions
+            const newWindow = window.open('', '_blank', 'width=1000,height=800,scrollbars=yes,resizable=yes');
             
-            // Open in new window/tab
-            const newWindow = window.open('', '_blank');
+            // Check if popup was blocked
+            if (!newWindow) {
+                alert('Popup blocked! Please allow popups for this site to view articles.');
+                return;
+            }
+            
             newWindow.document.write(newWindowContent);
             newWindow.document.close();
             newWindow.focus();
+            
+            // Set a proper title for the window
+            newWindow.document.title = article.title || 'Article';
         }
 
     </script>
