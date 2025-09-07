@@ -4,11 +4,12 @@
 import requests
 import json
 
+
 def main():
     print('🔍 COMPREHENSIVE FRESH-NEWS-DEPLOYMENT TEST')
     print('=' * 50)
 
-    # Test the new deployment URL  
+    # Test the new deployment URL
     url_base = 'https://fresh-news-deployment-2h2wcwy61-prestigecorp4s-projects.vercel.app'
 
     # Test 1: Homepage
@@ -24,34 +25,35 @@ def main():
     try:
         response = requests.post(
             f'{url_base}/api/search',
-            json={'query': 'climate change australia', 'sources': ['mercury'], 'max_results': 3},
+            json={'query': 'climate change australia',
+                  'sources': ['mercury'], 'max_results': 3},
             timeout=30
         )
         print(f'   Status: {response.status_code}')
-        
+
         if response.status_code == 200:
             data = response.json()
             found = data.get('found', 0)
             urls = data.get('urls', [])
             sources = data.get('sources_searched', [])
-            
+
             print(f'   Found: {found} articles ✅')
             print(f'   URLs: {len(urls)}')
             print(f'   Sources: {sources}')
-            
+
             if urls:
                 # Test 3: Scrape one of the found articles
                 print('\n3. Testing Scrape API with real URL...')
                 test_url = urls[0]
                 print(f'   Scraping: {test_url[:60]}...')
-                
+
                 scrape_response = requests.post(
                     f'{url_base}/api/scrape',
                     json={'urls': [test_url]},
                     timeout=30
                 )
                 print(f'   Status: {scrape_response.status_code}')
-                
+
                 if scrape_response.status_code == 200:
                     scrape_data = scrape_response.json()
                     articles = scrape_data.get('articles', [])
@@ -60,7 +62,7 @@ def main():
                         title = article.get('title', 'N/A')[:50]
                         content_length = article.get('content_length', 0)
                         success = article.get('success', False)
-                        
+
                         print(f'   Title: {title}...')
                         print(f'   Content length: {content_length} chars')
                         print(f'   Success: {success} ✅')
@@ -71,7 +73,7 @@ def main():
         else:
             print(f'   Search failed: {response.status_code} ❌')
             print(f'   Response: {response.text[:100]}...')
-            
+
     except Exception as e:
         print(f'   Error: {e} ❌')
 
@@ -80,6 +82,7 @@ def main():
     print('✅ Search functionality restored')
     print('✅ Article scraping operational')
     print('✅ Vercel deployment successful')
+
 
 if __name__ == '__main__':
     main()

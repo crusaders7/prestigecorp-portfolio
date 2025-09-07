@@ -13,16 +13,17 @@ from typing import Dict, List, Optional
 import requests
 from urllib.parse import urlencode
 
+
 class APIUsageTracker:
     """Track and limit API usage to prevent unexpected costs"""
-    
+
     def __init__(self, usage_file: str = "api_usage.json"):
         self.usage_file = usage_file
         self.daily_limit = 100  # Free tier: 100 queries/day
         self.hourly_limit = 20  # Rate limiting: 20 queries/hour
         self.cache_duration = 3600  # Cache results for 1 hour
         self.usage_data = self.load_usage_data()
-    
+
     def load_usage_data(self) -> Dict:
         """Load usage tracking data"""
         if os.path.exists(self.usage_file):
@@ -39,7 +40,7 @@ class APIUsageTracker:
             "total_queries": 0,
             "cache": {}
         }
-    
+
     def save_usage_data(self):
         """Save usage tracking data"""
         try:
@@ -47,59 +48,59 @@ class APIUsageTracker:
                 json.dump(self.usage_data, f, indent=2)
         except Exception as e:
             print(f"Warning: Could not save usage data: {e}")
-    
+
     def reset_counters_if_needed(self):
         """Reset daily and hourly counters if needed"""
         now = datetime.now()
         current_date = now.strftime("%Y-%m-%d")
         current_hour = now.strftime("%Y-%m-%d-%H")
-        
+
         # Reset daily counter
         if self.usage_data["last_reset_date"] != current_date:
             self.usage_data["daily_count"] = 0
             self.usage_data["last_reset_date"] = current_date
             print(f"🔄 Daily API counter reset for {current_date}")
-        
+
         # Reset hourly counter
         if self.usage_data["last_reset_hour"] != current_hour:
             self.usage_data["hourly_count"] = 0
             self.usage_data["last_reset_hour"] = current_hour
             print(f"🔄 Hourly API counter reset for {current_hour}")
-    
+
     def can_make_request(self) -> tuple[bool, str]:
         """Check if we can make an API request"""
         self.reset_counters_if_needed()
-        
+
         if self.usage_data["daily_count"] >= self.daily_limit:
             return False, f"Daily limit reached ({self.daily_limit} queries/day)"
-        
+
         if self.usage_data["hourly_count"] >= self.hourly_limit:
             return False, f"Hourly rate limit reached ({self.hourly_limit} queries/hour)"
-        
+
         return True, "OK"
-    
+
     def get_cache_key(self, query: str, num: int = 10) -> str:
         """Generate cache key for query"""
         cache_string = f"{query.lower()}:{num}"
         return hashlib.md5(cache_string.encode()).hexdigest()
-    
+
     def get_cached_result(self, query: str, num: int = 10) -> Optional[Dict]:
         """Get cached result if available and not expired"""
         cache_key = self.get_cache_key(query, num)
-        
+
         if cache_key in self.usage_data["cache"]:
             cached = self.usage_data["cache"][cache_key]
             cache_time = datetime.fromisoformat(cached["timestamp"])
-            
+
             if datetime.now() - cache_time < timedelta(seconds=self.cache_duration):
                 print(f"📋 Using cached result for '{query}' (saved API call)")
                 return cached["result"]
             else:
                 # Remove expired cache
                 del self.usage_data["cache"][cache_key]
-        
+
         return None
-    
+
     def cache_result(self, query: str, result: Dict, num: int = 10):
         """Cache API result"""
         cache_key = self.get_cache_key(query, num)
@@ -108,7 +109,7 @@ class APIUsageTracker:
             "result": result,
             "query": query
         }
-        
+
         # Clean old cache entries (keep last 50)
         if len(self.usage_data["cache"]) > 50:
             oldest_keys = sorted(
@@ -117,25 +118,27 @@ class APIUsageTracker:
             )[:10]
             for key in oldest_keys:
                 del self.usage_data["cache"][key]
-    
+
     def record_api_call(self):
         """Record that an API call was made"""
         self.usage_data["daily_count"] += 1
         self.usage_data["hourly_count"] += 1
         self.usage_data["total_queries"] += 1
         self.save_usage_data()
-        
+
         remaining_daily = self.daily_limit - self.usage_data["daily_count"]
         remaining_hourly = self.hourly_limit - self.usage_data["hourly_count"]
-        
+
         print(f"📊 API Usage: Daily {self.usage_data['daily_count']}/{self.daily_limit}, "
               f"Hourly {self.usage_data['hourly_count']}/{self.hourly_limit}")
-        
+
         if remaining_daily <= 10:
-            print(f"⚠️  WARNING: Only {remaining_daily} daily API calls remaining!")
+            print(
+                f"⚠️  WARNING: Only {remaining_daily} daily API calls remaining!")
         if remaining_hourly <= 5:
-            print(f"⚠️  WARNING: Only {remaining_hourly} hourly API calls remaining!")
-    
+            print(
+                f"⚠️  WARNING: Only {remaining_hourly} hourly API calls remaining!")
+
     def get_usage_stats(self) -> Dict:
         """Get current usage statistics"""
         self.reset_counters_if_needed()
@@ -150,29 +153,30 @@ class APIUsageTracker:
             "cached_results": len(self.usage_data["cache"])
         }
 
+
 class ProtectedGoogleCSE:
     """Google Custom Search with comprehensive cost protection"""
-    
+
     def __init__(self, api_key: str = None):
         # API configuration
         self.cse_id = "012527284968046999840:zzi3qgsoibq"
         self.api_endpoint = "https://www.googleapis.com/customsearch/v1"
         self.api_key = api_key or "AIzaSyDUfCvNOnT7K6GC5_9fLe6yE-p5pQys9N0"
-        
+
         # Initialize usage tracker
         self.tracker = APIUsageTracker()
-        
+
         # Cost information
         self.cost_per_query = 0.005  # $5 per 1000 queries
-        
+
         print("🛡️  API Protection Active")
         self.show_protection_status()
-    
+
     def show_protection_status(self):
         """Display current protection status"""
         stats = self.tracker.get_usage_stats()
         estimated_cost = stats["total_queries"] * self.cost_per_query
-        
+
         print("=" * 60)
         print("🛡️  API PROTECTION STATUS")
         print("=" * 60)
@@ -184,15 +188,15 @@ class ProtectedGoogleCSE:
         print(f"Cached Results: {stats['cached_results']}")
         print(f"Estimated Cost: ${estimated_cost:.3f}")
         print("=" * 60)
-    
+
     def search_protected(self, query: str, num: int = 10) -> Dict:
         """Protected search with all safeguards"""
-        
+
         # Step 1: Check cache first
         cached_result = self.tracker.get_cached_result(query, num)
         if cached_result:
             return cached_result
-        
+
         # Step 2: Check if we can make API request
         can_request, reason = self.tracker.can_make_request()
         if not can_request:
@@ -202,7 +206,7 @@ class ProtectedGoogleCSE:
                 "protection": "Rate limiting active",
                 "suggestion": "Try again later or use cached results"
             }
-        
+
         # Step 3: Validate input
         if not query or len(query.strip()) < 2:
             return {
@@ -210,34 +214,37 @@ class ProtectedGoogleCSE:
                 "error": "Query too short (minimum 2 characters)",
                 "protection": "Input validation"
             }
-        
+
         if num > 20:
-            print(f"⚠️  Limiting results to 20 to manage costs (requested: {num})")
+            print(
+                f"⚠️  Limiting results to 20 to manage costs (requested: {num})")
             num = 20
-        
+
         # Step 4: Make the API request(s) with pagination for higher result counts
         try:
             all_items = []
             total_results = '0'
             search_time = '0'
-            
+
             # Calculate how many API calls we need (max 10 results per call)
             results_per_call = 10
-            total_calls_needed = min((num + results_per_call - 1) // results_per_call, 10)  # Max 10 calls for 100 results
-            
+            # Max 10 calls for 100 results
+            total_calls_needed = min(
+                (num + results_per_call - 1) // results_per_call, 10)
+
             for call_num in range(total_calls_needed):
                 # Check if we can make another API request
                 can_request, reason = self.tracker.can_make_request()
                 if not can_request:
                     print(f"⚠️  Stopping pagination early: {reason}")
                     break
-                
+
                 start_index = call_num * results_per_call + 1  # API uses 1-based indexing
                 results_this_call = min(results_per_call, num - len(all_items))
-                
+
                 if results_this_call <= 0:
                     break
-                
+
                 params = {
                     'key': self.api_key,
                     'cx': self.cse_id,
@@ -247,37 +254,43 @@ class ProtectedGoogleCSE:
                     'safe': 'off',
                     'fields': 'items(title,link,snippet,displayLink),searchInformation(totalResults,searchTime)'
                 }
-                
-                print(f"🔍 Making protected API call {call_num + 1}/{total_calls_needed} for: '{query}' (start: {start_index})")
-                response = requests.get(self.api_endpoint, params=params, timeout=30)
-                
+
+                print(
+                    f"🔍 Making protected API call {call_num + 1}/{total_calls_needed} for: '{query}' (start: {start_index})")
+                response = requests.get(
+                    self.api_endpoint, params=params, timeout=30)
+
                 if response.status_code == 200:
                     # Record successful API call
                     self.tracker.record_api_call()
-                    
+
                     data = response.json()
-                    
+
                     # Store total results info from first call
                     if call_num == 0:
-                        total_results = data.get('searchInformation', {}).get('totalResults', '0')
-                        search_time = data.get('searchInformation', {}).get('searchTime', '0')
-                    
+                        total_results = data.get(
+                            'searchInformation', {}).get('totalResults', '0')
+                        search_time = data.get(
+                            'searchInformation', {}).get('searchTime', '0')
+
                     # Add items from this call
                     call_items = data.get('items', [])
                     all_items.extend(call_items)
-                    
+
                     # If we got fewer results than requested, there are no more results
                     if len(call_items) < results_this_call:
-                        print(f"📄 Got {len(call_items)} results (expected {results_this_call}) - no more results available")
+                        print(
+                            f"📄 Got {len(call_items)} results (expected {results_this_call}) - no more results available")
                         break
-                        
+
                     # Don't exceed the requested num
                     if len(all_items) >= num:
                         all_items = all_items[:num]
                         break
-                        
+
                 else:
-                    print(f"❌ API call {call_num + 1} failed with status {response.status_code}")
+                    print(
+                        f"❌ API call {call_num + 1} failed with status {response.status_code}")
                     if call_num == 0:  # If first call fails, return error
                         return {
                             "success": False,
@@ -286,9 +299,10 @@ class ProtectedGoogleCSE:
                             "status_code": response.status_code
                         }
                     else:  # If subsequent calls fail, return what we have
-                        print(f"⚠️  Continuing with {len(all_items)} results from successful calls")
+                        print(
+                            f"⚠️  Continuing with {len(all_items)} results from successful calls")
                         break
-            
+
             # Create final result
             result = {
                 "success": True,
@@ -303,23 +317,23 @@ class ProtectedGoogleCSE:
                     "estimated_cost": self.cost_per_query * min(call_num + 1, total_calls_needed)
                 }
             }
-            
+
             # Cache the result
             self.tracker.cache_result(query, result, num)
-            
+
             return result
-                
+
         except Exception as e:
             return {
                 "success": False,
                 "error": f"Search failed: {str(e)}",
                 "exception": str(e)
             }
-    
+
     def search_simple(self, query: str, max_results: int = 10) -> List[Dict]:
         """Simple search interface with protection"""
         result = self.search_protected(query, max_results)
-        
+
         if result.get('success'):
             articles = []
             for item in result.get('items', []):
@@ -333,14 +347,14 @@ class ProtectedGoogleCSE:
         else:
             print(f"❌ Search failed: {result.get('error', 'Unknown error')}")
             return []
-    
+
     def emergency_stop(self):
         """Emergency stop - block all API calls"""
         self.tracker.daily_limit = 0
         self.tracker.hourly_limit = 0
         self.tracker.save_usage_data()
         print("🚨 EMERGENCY STOP: All API calls blocked!")
-    
+
     def reset_limits(self):
         """Reset usage limits (use with caution)"""
         self.tracker.usage_data["daily_count"] = 0
@@ -348,21 +362,22 @@ class ProtectedGoogleCSE:
         self.tracker.save_usage_data()
         print("🔄 Usage limits reset")
 
+
 def main():
     """Main function with protected search"""
     import sys
-    
+
     print("🛡️  Protected Google Custom Search Engine")
     print("Multiple layers of cost protection active")
     print("=" * 70)
-    
+
     # Create protected CSE manager
     cse = ProtectedGoogleCSE()
-    
+
     # Check if search query provided
     if len(sys.argv) > 1:
         query = sys.argv[1]
-        
+
         # Special commands
         if query.lower() == "--stats":
             cse.show_protection_status()
@@ -373,13 +388,13 @@ def main():
         elif query.lower() == "--reset":
             cse.reset_limits()
             return
-        
+
         print(f"🔍 Protected search for: '{query}'")
         print("-" * 50)
-        
+
         # Perform protected search
         articles = cse.search_simple(query, max_results=10)
-        
+
         if articles:
             print(f"✅ Found {len(articles)} articles:")
             print()
@@ -390,11 +405,11 @@ def main():
                 print()
         else:
             print("❌ No articles found or API limit reached")
-        
+
         # Show updated protection status
         print("-" * 50)
         cse.show_protection_status()
-        
+
     else:
         cse.show_protection_status()
         print("\n💡 Usage:")
@@ -402,6 +417,7 @@ def main():
         print("   python protected_cse.py --stats")
         print("   python protected_cse.py --emergency-stop")
         print("   python protected_cse.py --reset")
+
 
 if __name__ == "__main__":
     main()
