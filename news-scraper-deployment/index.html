@@ -1307,7 +1307,7 @@
             const statusMessage = document.getElementById('statusMessage');
             const statusText = document.getElementById('statusText');
             const statusIcon = document.getElementById('statusIcon');
-
+            
             // Set icon and styling based on type
             if (type === 'success') {
                 statusMessage.className = 'p-4 rounded-xl border backdrop-blur-sm bg-green-500/20 border-green-500/30';
@@ -1319,10 +1319,10 @@
                 statusMessage.className = 'p-4 rounded-xl border backdrop-blur-sm bg-blue-500/20 border-blue-500/30';
                 statusIcon.innerHTML = '<i class="fas fa-info-circle text-blue-400"></i>';
             }
-
+            
             statusText.textContent = message;
             statusMessage.classList.remove('hidden');
-
+            
             // Auto-hide success messages after 5 seconds
             if (type === 'success') {
                 setTimeout(() => {
@@ -1339,7 +1339,7 @@
             const advancedOptions = document.getElementById('advancedOptions');
             const advancedToggleText = document.getElementById('advancedToggleText');
             const advancedToggleIcon = document.getElementById('advancedToggleIcon');
-
+            
             if (advancedOptions.classList.contains('hidden')) {
                 advancedOptions.classList.remove('hidden');
                 advancedToggleText.textContent = 'Hide';
@@ -1364,7 +1364,7 @@
         async function searchArticles() {
             const query = document.getElementById('searchQuery').value.trim();
             const maxResults = parseInt(document.getElementById('maxResults').value) || 10;
-
+            
             if (!query) {
                 showStatus('Please enter a search query', 'error');
                 return;
@@ -1377,7 +1377,7 @@
 
             try {
                 showStatus('Searching for articles...', 'info');
-
+                
                 const response = await fetch(`${API_BASE}/search`, {
                     method: 'POST',
                     headers: {
@@ -1436,7 +1436,7 @@
             const resultsSection = document.getElementById('resultsSection');
             const articlesList = document.getElementById('articlesList');
             const resultsCount = document.getElementById('resultsCount');
-
+            
             if (articles.length === 0) {
                 articlesList.innerHTML = '<p class="text-gray-400 text-center py-8">No articles found for this search.</p>';
                 resultsCount.textContent = '0 articles found';
@@ -1474,18 +1474,18 @@
             const scrapeBtn = document.getElementById('scrapeBtn');
             scrapeBtn.disabled = true;
             scrapeBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Scraping...';
-
+            
             const progressContainer = document.getElementById('progressContainer');
             const progressFill = document.getElementById('progressFill');
             const progressText = document.getElementById('progressText');
-
+            
             progressContainer.classList.remove('hidden');
             progressFill.style.width = '0%';
             progressText.textContent = '0%';
 
             try {
                 showStatus(`Scraping ${searchResults.length} articles...`, 'info');
-
+                
                 const response = await fetch(`${API_BASE}/scrape`, {
                     method: 'POST',
                     headers: {

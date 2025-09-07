@@ -11,17 +11,11 @@ from pathlib import Path
 def create_deployment_zip():
     """Create a zip file with all deployment files"""
     
-    # Use relative paths instead of absolute paths
-    deployment_dir = Path("news-scraper-deployment")
-    zip_path = Path("news-scraper-deployment.zip")
+    deployment_dir = Path("C:/Users/prest/prestigecorp-portfolio/news-scraper-deployment")
+    zip_path = Path("C:/Users/prest/prestigecorp-portfolio/news-scraper-deployment.zip")
     
     print("🚀 Creating deployment package...")
     print("=" * 50)
-    
-    # Check if deployment directory exists
-    if not deployment_dir.exists():
-        print(f"❌ Deployment directory not found: {deployment_dir}")
-        return None
     
     # Create zip file
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
@@ -84,17 +78,14 @@ def show_deployment_steps():
 if __name__ == "__main__":
     try:
         zip_path = create_deployment_zip()
-        if zip_path:
-            show_deployment_steps()
-            
-            print(f"\n📋 QUICK CHECKLIST:")
-            print(f"   ✅ Deployment zip ready: {zip_path}")
-            print(f"   ⏳ Upload files to GitHub repository")
-            print(f"   ⏳ Set environment variables in Vercel")
-            print(f"   ⏳ Wait for deployment")
-            print(f"   ⏳ Test the API")
-        else:
-            print("❌ Failed to create deployment zip")
+        show_deployment_steps()
+        
+        print(f"\n📋 QUICK CHECKLIST:")
+        print(f"   ✅ Deployment zip ready: {zip_path}")
+        print(f"   ⏳ Upload files to GitHub repository")
+        print(f"   ⏳ Set environment variables in Vercel")
+        print(f"   ⏳ Wait for deployment")
+        print(f"   ⏳ Test the API")
         
     except Exception as e:
         print(f"❌ Error: {e}")
