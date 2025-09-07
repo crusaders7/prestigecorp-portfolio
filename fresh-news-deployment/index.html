@@ -1954,6 +1954,7 @@
             const newWindow = window.open('', '_blank', 'width=1000,height=800,scrollbars=yes,resizable=yes');
 
             // Check if popup was blocked
+            // This provides better user experience when popups are blocked by the browser
             if (!newWindow) {
                 alert('Popup blocked! Please allow popups for this site to view articles.');
                 return;
